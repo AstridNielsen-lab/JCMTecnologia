@@ -29,22 +29,24 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
   const projectCost = baseProjectCost * estimatedMonths;
 
   const systemPrompt = `
-    You are an AI assistant for the DISPARAT TECHNO project "${repository.name}".
-    Project details:
-    - Description: ${repository.description}
-    - Technologies: ${repository.topics.join(', ')}
-    - Base monthly cost: $1,000
-    - Estimated project duration: ${estimatedMonths} months
-    - Initial project cost estimate: $${projectCost}
+    Voce e um assistente para o projeto "${repository.name}".
+    Detalhes do projeto:
+    - Descricao: ${repository.description}
+    - Tecnologias: ${repository.topics.join(', ')}
+    - Custo base mensal: $1,000
+    - Duracao estimada: ${estimatedMonths} meses
+    - Estimativa inicial: $${projectCost}
     
-    Provide detailed information about the project, technical specifications, and cost estimates.
-    Be professional and focus on helping potential clients understand the project's value and requirements.
+    Forneca informacoes detalhadas sobre o projeto, especificacoes tecnicas e estimativas de custo.
+    Seja profissional e foque em ajudar potenciais clientes a entender o valor e os requisitos do projeto.
     
-    Company Information:
-    - Developer: Julio Campos Machado
-    - Contact: WhatsApp (11) 99294-6628
-    - Company: Like Look Solutions
+    Informacoes da empresa:
+    - Desenvolvedor: Julio Campos Machado
+    - Contato: WhatsApp (11) 99294-6628
+    - Empresa: Like Look Solutions
     - Website: https://likelook.wixsite.com/solutions
+
+    Use apenas pontuacao basica (ponto, virgula) para uma leitura natural e fluida.
   `;
 
   useEffect(() => {
@@ -97,7 +99,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        setInput('Transcrição de áudio em andamento...');
+        setInput('Transcricao de audio em andamento...');
       };
 
       mediaRecorder.start();
@@ -150,7 +152,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl h-[600px] flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center bg-gray-900 text-white rounded-t-lg">
+        <div className="p-4 border-b flex justify-between items-center bg-black text-white rounded-t-lg">
           <h3 className="text-xl font-semibold">Chat - {repository.name}</h3>
           <div className="flex items-center space-x-2">
             <button
@@ -174,12 +176,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4"
         >
-          <div className="bg-gradient-to-r from-purple-100 to-blue-100 p-4 rounded-lg shadow-md">
-            <p className="font-semibold text-gray-800">Informações do Projeto:</p>
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <p className="font-semibold text-black">Informacoes do Projeto:</p>
             <p className="text-gray-700">{repository.description}</p>
             <p className="mt-2 text-gray-700">Tecnologias: {repository.topics.join(', ')}</p>
             <p className="mt-2 text-gray-700">Custo base mensal: $1,000</p>
-            <p className="text-gray-700">Duração estimada: {estimatedMonths} meses</p>
+            <p className="text-gray-700">Duracao estimada: {estimatedMonths} meses</p>
             <p className="text-gray-700">Estimativa inicial: ${projectCost}</p>
           </div>
 
@@ -189,10 +191,10 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] p-3 rounded-lg shadow-md ${
+                className={`max-w-[80%] p-3 rounded-lg ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                    : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
+                    ? 'bg-black text-white'
+                    : 'bg-gray-100 text-black'
                 }`}
               >
                 {message.content}
@@ -202,11 +204,11 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
           
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 p-3 rounded-lg shadow-md">
+              <div className="bg-gray-100 p-3 rounded-lg">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-purple-800 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-gray-800 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
@@ -229,12 +231,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Digite sua mensagem..."
-              className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+              className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black text-black bg-white"
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2 rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all duration-200"
+              className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-all duration-200"
             >
               <Send className="h-5 w-5" />
             </button>

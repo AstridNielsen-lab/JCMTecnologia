@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Octokit } from 'octokit';
 import AIChat from '../components/AIChat';
+import { Search, Filter } from 'lucide-react';
 
 interface Repository {
   id: number;
@@ -8,15 +9,20 @@ interface Repository {
   description: string;
   html_url: string;
   topics: string[];
+  stargazers_count: number;
+  language: string;
 }
 
 const Products = () => {
-  const [repos, setRepos] = useState<Repository[]>([]);
+  const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([]);
+  const [allTechnologies, setAllTechnologies] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchRepos = async () => {
+    const fetchRepositories = async () => {
       try {
         const octokit = new Octokit();
         const response = await octokit.request('GET /users/AstridNielsen-lab/repos', {
@@ -27,7 +33,26 @@ const Products = () => {
             'X-GitHub-Api-Version': '2022-11-28'
           }
         });
-        setRepos(response.data);
+
+        const repos = response.data.map(repo => ({
+          id: repo.id,
+          name: repo.name,
+          description: repo.description || 'Sem descrição disponível',
+          html_url: repo.html_url,
+          topics: repo.topics,
+          stargazers_count: repo.stargazers_count,
+          language: repo.language || 'Não especificada'
+        }));
+
+        // Extract unique technologies from languages and topics
+        const technologies = new Set<string>();
+        repos.forEach(repo => {
+          if (repo.language) technologies.add(repo.language);
+          repo.topics.forEach(topic => technologies.add(topic));
+        });
+
+        setAllTechnologies(Array.from(technologies).sort());
+        setRepositories(repos);
       } catch (error) {
         console.error('Error fetching repositories:', error);
       } finally {
@@ -35,46 +60,108 @@ const Products = () => {
       }
     };
 
-    fetchRepos();
+    fetchRepositories();
   }, []);
+
+  const filteredRepositories = repositories.filter(repo => {
+    const matchesTech = selectedTechnologies.length === 0 || 
+      selectedTechnologies.some(tech => 
+        repo.topics.includes(tech.toLowerCase()) || 
+        repo.language === tech
+      );
+
+    const matchesSearch = searchTerm === '' ||
+      repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return matchesTech && matchesSearch;
+  });
+
+  const toggleTechnology = (tech: string) => {
+    setSelectedTechnologies(prev =>
+      prev.includes(tech)
+        ? prev.filter(t => t !== tech)
+        : [...prev, tech]
+    );
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
       </div>
     );
   }
 
   return (
-    <div className="py-16 bg-gray-50">
+    <div className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold mb-8 text-center">Nossos Produtos</h1>
+        <h1 className="text-4xl font-bold mb-8 text-center text-black">Projetos</h1>
+
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Buscar projetos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="text-black h-5 w-5" />
+              <span className="text-black font-medium">Filtrar por:</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-6">
+            {allTechnologies.map(tech => (
+              <button
+                key={tech}
+                onClick={() => toggleTechnology(tech)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedTechnologies.includes(tech)
+                    ? 'bg-black text-white'
+                    : 'bg-gray-200 text-black hover:bg-gray-300'
+                }`}
+              >
+                {tech}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {repos.map((repo) => (
-            <div key={repo.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+          {filteredRepositories.map((repo) => (
+            <div key={repo.id} className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
               <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">{repo.name}</h3>
-                <p className="text-gray-600 mb-4">{repo.description || 'No description available'}</p>
+                <h3 className="text-xl font-semibold mb-2 text-black">{repo.name}</h3>
+                <p className="text-gray-600 mb-4 h-20 overflow-hidden">{repo.description}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {repo.topics.map((topic) => (
-                    <span key={topic} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                    <span key={topic} className="px-2 py-1 bg-gray-100 text-black rounded-full text-sm">
                       {topic}
                     </span>
                   ))}
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-gray-600">⭐ {repo.stargazers_count}</span>
+                  <span className="text-gray-600">{repo.language}</span>
                 </div>
                 <div className="flex space-x-2">
                   <a
                     href={repo.html_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors text-center"
+                    className="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-center"
                   >
                     Ver no GitHub
                   </a>
                   <button
                     onClick={() => setSelectedRepo(repo)}
-                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                    className="flex-1 border border-black text-black px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     Saiba Mais
                   </button>
