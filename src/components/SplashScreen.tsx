@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, ArrowRight } from 'lucide-react';
+import { Send, ArrowRight, Scale } from 'lucide-react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -9,15 +9,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [showSubscribe, setShowSubscribe] = useState(false);
 
   useEffect(() => {
-    // Check if user has already subscribed
     const subscribed = localStorage.getItem('subscribed') === 'true';
     if (subscribed) {
       setIsSubscribed(true);
       setTimeout(() => {
         setIsAnimating(false);
         setTimeout(onComplete, 500);
+      }, 2000);
+    } else {
+      setTimeout(() => {
+        setShowSubscribe(true);
       }, 2000);
     }
   }, [onComplete]);
@@ -26,11 +30,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
     e.preventDefault();
     
     try {
-      // Send email to your email address
       const mailtoLink = `mailto:juliocamposmachado@gmail.com?subject=Nova Inscrição Newsletter&body=Novo inscrito: ${email}`;
       window.location.href = mailtoLink;
       
-      // Save subscription status
       localStorage.setItem('subscribed', 'true');
       localStorage.setItem('userEmail', email);
       
@@ -56,15 +58,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
       }`}
     >
       <div className="max-w-md w-full mx-4">
-        <div className="text-center mb-12">
+        <div className={`text-center mb-12 transition-all duration-500 ${showSubscribe ? 'transform translate-y-0' : 'transform -translate-y-6'}`}>
           <h1 className="text-5xl font-bold text-white mb-4">JCM Tecnologia</h1>
           <div className="h-px w-24 bg-gray-700 mx-auto mb-4"></div>
           <p className="text-xl text-gray-400 font-light">Julio Campos Machado</p>
           <p className="text-md text-gray-500 mt-1">Dev Full Stack</p>
         </div>
         
-        {!isSubscribed ? (
-          <div className="space-y-4">
+        {!isSubscribed && showSubscribe ? (
+          <div className={`space-y-4 transition-all duration-500 ${showSubscribe ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-4'}`}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <input
@@ -92,12 +94,18 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        ) : (
+        ) : isSubscribed ? (
           <div className="text-center">
             <p className="text-2xl text-white mb-4">Obrigado por se inscrever!</p>
-            <div className="animate-pulse">
-              <div className="w-8 h-8 border-t-2 border-white rounded-full animate-spin mx-auto"></div>
+            <div className="relative w-16 h-16 mx-auto">
+              <div className="absolute inset-0 border-4 border-gray-800 border-t-white rounded-full animate-spin"></div>
+              <Scale className="absolute inset-0 m-auto text-white w-8 h-8" />
             </div>
+          </div>
+        ) : (
+          <div className="relative w-24 h-24 mx-auto">
+            <div className="absolute inset-0 border-4 border-gray-800 border-t-white rounded-full animate-spin"></div>
+            <Scale className="absolute inset-0 m-auto text-white w-12 h-12" />
           </div>
         )}
       </div>

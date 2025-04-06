@@ -29,24 +29,24 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
   const projectCost = baseProjectCost * estimatedMonths;
 
   const systemPrompt = `
-    Voce e um assistente para o projeto "${repository.name}".
+    Voce e um assistente para o projeto ${repository.name}.
     Detalhes do projeto:
-    - Descricao: ${repository.description}
-    - Tecnologias: ${repository.topics.join(', ')}
-    - Custo base mensal: $1,000
-    - Duracao estimada: ${estimatedMonths} meses
-    - Estimativa inicial: $${projectCost}
+    Descricao: ${repository.description}
+    Tecnologias: ${repository.topics.join(', ')}
+    Custo base mensal: $1,000
+    Duracao estimada: ${estimatedMonths} meses
+    Estimativa inicial: $${projectCost}
     
-    Forneca informacoes detalhadas sobre o projeto, especificacoes tecnicas e estimativas de custo.
+    Forneca informacoes sobre o projeto, especificacoes tecnicas e estimativas de custo.
     Seja profissional e foque em ajudar potenciais clientes a entender o valor e os requisitos do projeto.
     
     Informacoes da empresa:
-    - Desenvolvedor: Julio Campos Machado
-    - Contato: WhatsApp (11) 99294-6628
-    - Empresa: Like Look Solutions
-    - Website: https://likelook.wixsite.com/solutions
+    Desenvolvedor: Julio Campos Machado
+    Contato: WhatsApp (11) 99294-6628
+    Empresa: Like Look Solutions
+    Website: https://likelook.wixsite.com/solutions
 
-    Use apenas pontuacao basica (ponto, virgula) para uma leitura natural e fluida.
+    IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais, asteriscos, parenteses ou qualquer formatacao especial. Mantenha as respostas com uma leitura natural e fluida.
   `;
 
   useEffect(() => {
