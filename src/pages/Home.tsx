@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRightIcon, StarIcon, GitForkIcon, Cpu, Code, Zap, Brain, Globe, Shield } from 'lucide-react';
+import { ArrowRightIcon, StarIcon, GitForkIcon, Brain, Globe, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Project {
@@ -80,7 +80,7 @@ const Home = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-8 py-4 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
               >
-                <Code className="mr-2 h-5 w-5" />
+                <Globe className="mr-2 h-5 w-5" />
                 <span>GitHub</span>
               </a>
             </div>
@@ -168,8 +168,8 @@ const Home = () => {
                     </div>
                   </div>
                   <Link
-                    to="/products"
-                    className="inline-block w-full text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+                    to={`/products?search=${encodeURIComponent(project.name)}`}
+                    className="inline-block w-full text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 transform hover:scale-105"
                   >
                     Saiba Mais
                   </Link>
