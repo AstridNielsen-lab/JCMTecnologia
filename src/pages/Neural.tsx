@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Activity, Wand2, Mic, MicOff } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Brain, Activity, Wand2, Mic, MicOff, Send, X } from 'lucide-react';
 import AIChat from '../components/AIChat';
 
 interface LogEntry {
@@ -13,11 +13,9 @@ const Neural = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
-  const [transcribedText, setTranscribedText] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const neuralCanvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const animationFrameRef = useRef<number>();
   const neuralAnimationFrameRef = useRef<number>();
 
@@ -116,59 +114,14 @@ const Neural = () => {
     };
   }, [isProcessing, isRecording]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        chunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
-        setTranscribedText('Processando sua fala...');
-        setShowAIChat(true);
-        
-        // In a real implementation, we would send the audio to a speech-to-text service
-        // For now, we'll simulate the transcription
-        setTimeout(() => {
-          setTranscribedText('Análise neural iniciada com base em sua fala.');
-          setLogs(prev => [...prev, {
-            type: 'user',
-            message: 'Análise neural iniciada através de comando de voz.',
-            timestamp: Date.now()
-          }]);
-        }, 1500);
-
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setLogs(prev => [...prev, {
-        type: 'system',
-        message: 'Gravação de voz iniciada. Por favor, fale sobre seus pensamentos ou sentimentos.',
-        timestamp: Date.now()
-      }]);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      setLogs(prev => [...prev, {
-        type: 'system',
-        message: 'Erro ao acessar o microfone. Por favor, verifique as permissões.',
-        timestamp: Date.now()
-      }]);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsProcessing(true);
-    }
+  const startAnalysis = () => {
+    setShowAIChat(true);
+    setIsRecording(true);
+    setLogs(prev => [...prev, {
+      type: 'system',
+      message: 'Análise neural iniciada. Aguardando sua fala...',
+      timestamp: Date.now()
+    }]);
   };
 
   const mockRepository = {
@@ -178,81 +131,68 @@ const Neural = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black py-12 px-4">
+    <div className="min-h-screen bg-black py-6 sm:py-12 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="space-y-8">
-            <h1 className="text-4xl font-bold cyberpunk-gradient">
+          <div className="space-y-6 sm:space-y-8">
+            <h1 className="text-3xl sm:text-4xl font-bold cyberpunk-gradient">
               Interface Neural
             </h1>
-            <p className="text-cyan-400 text-lg">
+            <p className="text-cyan-400 text-base sm:text-lg">
               Sistema avançado de análise neural com base em psicologia, psicanálise e filosofia.
               Utilize sua voz para compartilhar pensamentos e receber uma análise profunda.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-6 hover:border-cyan-400 transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-4">
-                  <Brain className="h-6 w-6 text-cyan-400" />
-                  <h3 className="text-xl font-semibold text-cyan-400">Análise Psicológica</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-4 sm:p-6 hover:border-cyan-400 transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-3 sm:mb-4">
+                  <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-400" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-cyan-400">Análise Psicológica</h3>
                 </div>
-                <p className="text-gray-400">
+                <p className="text-gray-400 text-sm sm:text-base">
                   Análise profunda baseada em conceitos de psicologia e psicanálise, explorando padrões de pensamento e comportamento.
                 </p>
               </div>
               
-              <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-6 hover:border-cyan-400 transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-4">
-                  <Activity className="h-6 w-6 text-purple-400" />
-                  <h3 className="text-xl font-semibold text-purple-400">Insights Filosóficos</h3>
+              <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-4 sm:p-6 hover:border-cyan-400 transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-3 sm:mb-4">
+                  <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-purple-400">Insights Filosóficos</h3>
                 </div>
-                <p className="text-gray-400">
+                <p className="text-gray-400 text-sm sm:text-base">
                   Conexões com conceitos filosóficos relevantes para compreensão mais profunda do ser.
                 </p>
               </div>
             </div>
 
             <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`flex items-center space-x-2 ${
-                isRecording 
-                  ? 'bg-red-500 hover:bg-red-600' 
-                  : 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600'
-              } text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105`}
+              onClick={startAnalysis}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
             >
-              {isRecording ? (
-                <>
-                  <MicOff className="h-5 w-5" />
-                  <span>Parar Gravação</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="h-5 w-5" />
-                  <span>Iniciar Análise Neural</span>
-                </>
-              )}
+              <Brain className="h-5 w-5" />
+              <span>Iniciar Análise Neural</span>
             </button>
           </div>
 
           {/* Neural Interface */}
-          <div className="relative">
+          <div className="relative mt-6 lg:mt-0">
             <div className="cyber-interface">
-              <div className="neural-header flex items-center space-x-4 mb-6">
-                <Brain className="h-8 w-8 text-cyan-400 animate-pulse" />
+              <div className="neural-header flex items-center space-x-4 mb-4 sm:mb-6">
+                <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400 animate-pulse" />
                 <div>
-                  <h3 className="text-cyan-400 font-semibold">Sistema Neural</h3>
-                  <p className="text-sm text-cyan-500">
+                  <h3 className="text-base sm:text-lg text-cyan-400 font-semibold">Sistema Neural</h3>
+                  <p className="text-xs sm:text-sm text-cyan-500">
                     Status: {isRecording ? 'Gravando' : isProcessing ? 'Processando' : 'Pronto'}
                   </p>
                 </div>
               </div>
 
-              <div className="chat-logs mb-6">
+              <div className="chat-logs mb-4 sm:mb-6 max-h-[150px] sm:max-h-[200px]">
                 {logs.map((log, index) => (
                   <div
                     key={index}
-                    className={`log mb-2 p-2 rounded ${
+                    className={`log mb-2 p-2 rounded text-sm sm:text-base ${
                       log.type === 'ai' 
                         ? 'bg-cyan-950/30' 
                         : log.type === 'system'
@@ -280,7 +220,7 @@ const Neural = () => {
               </div>
 
               <div className="voice-animation mb-4">
-                <p className="text-sm text-cyan-500 mb-2">Análise de Voz</p>
+                <p className="text-xs sm:text-sm text-cyan-500 mb-2">Análise de Voz</p>
                 <canvas
                   ref={canvasRef}
                   width={280}
@@ -290,7 +230,7 @@ const Neural = () => {
               </div>
 
               <div className="neural-monitor">
-                <p className="text-sm text-cyan-500 mb-2">Monitor Neural</p>
+                <p className="text-xs sm:text-sm text-cyan-500 mb-2">Monitor Neural</p>
                 <canvas
                   ref={neuralCanvasRef}
                   width={280}
@@ -306,7 +246,11 @@ const Neural = () => {
       {showAIChat && (
         <AIChat 
           repository={mockRepository}
-          onClose={() => setShowAIChat(false)}
+          onClose={() => {
+            setShowAIChat(false);
+            setIsRecording(false);
+            setIsProcessing(false);
+          }}
         />
       )}
     </div>
