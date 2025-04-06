@@ -24,29 +24,26 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const baseProjectCost = 1000;
-  const estimatedMonths = Math.floor(Math.random() * 3) + 1;
-  const projectCost = baseProjectCost * estimatedMonths;
-
   const systemPrompt = `
-    Voce e um assistente para o projeto ${repository.name}.
-    Detalhes do projeto:
-    Descricao: ${repository.description}
-    Tecnologias: ${repository.topics.join(', ')}
-    Custo base mensal: $1,000
-    Duracao estimada: ${estimatedMonths} meses
-    Estimativa inicial: $${projectCost}
+    Você é um assistente especializado em análise neural com foco em psicologia, psicanálise e filosofia.
     
-    Forneca informacoes sobre o projeto, especificacoes tecnicas e estimativas de custo.
-    Seja profissional e foque em ajudar potenciais clientes a entender o valor e os requisitos do projeto.
+    Contexto:
+    - Use conceitos de psicologia e psicanálise para analisar as falas do usuário
+    - Faça conexões com teorias filosóficas relevantes
+    - Mantenha um tom profissional mas acolhedor
+    - Cite pensadores e teorias quando relevante
+    - Evite diagnósticos, foque em reflexões e insights
     
-    Informacoes da empresa:
-    Desenvolvedor: Julio Campos Machado
-    Contato: WhatsApp (11) 99294-6628
-    Empresa: Like Look Solutions
-    Website: https://likelook.wixsite.com/solutions
-
-    IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais, asteriscos, parenteses ou qualquer formatacao especial. Mantenha as respostas com uma leitura natural e fluida.
+    Referências principais:
+    - Freud: Inconsciente, mecanismos de defesa, interpretação dos sonhos
+    - Jung: Arquétipos, inconsciente coletivo, individuação
+    - Lacan: Linguagem, simbólico, real e imaginário
+    - Nietzsche: Vontade de potência, eterno retorno
+    - Foucault: Relações de poder, subjetividade
+    - Sartre: Liberdade, responsabilidade, má-fé
+    
+    IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
+    Mantenha as respostas com uma leitura natural e fluida.
   `;
 
   useEffect(() => {
@@ -99,7 +96,16 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        setInput('Transcricao de audio em andamento...');
+        setInput('Processando sua fala...');
+        
+        // In a real implementation, we would send the audio to a speech-to-text service
+        // For now, we'll simulate the transcription
+        setTimeout(() => {
+          setInput('Como você se sente em relação a isso?');
+          handleSend();
+        }, 1500);
+
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -151,9 +157,9 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl h-[600px] flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center bg-black text-white rounded-t-lg">
-          <h3 className="text-xl font-semibold">Chat - {repository.name}</h3>
+      <div className="bg-black border border-cyan-500/30 rounded-lg w-full max-w-2xl h-[600px] flex flex-col">
+        <div className="p-4 border-b border-cyan-500/30 flex justify-between items-center rounded-t-lg">
+          <h3 className="text-xl font-semibold text-cyan-400">Análise Neural - {repository.name}</h3>
           <div className="flex items-center space-x-2">
             <button
               onClick={isSpeaking ? stopSpeaking : () => {
@@ -161,12 +167,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
                 if (lastAssistantMessage) speakMessage(lastAssistantMessage.content);
               }}
               className={`p-2 rounded-full transition-colors ${
-                isSpeaking ? 'bg-red-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'
+                isSpeaking ? 'bg-red-500 text-white' : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
               }`}
             >
               {isSpeaking ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
             </button>
-            <button onClick={onClose} className="text-gray-300 hover:text-white transition-colors">
+            <button onClick={onClose} className="text-cyan-400 hover:text-cyan-300 transition-colors">
               <X className="h-6 w-6" />
             </button>
           </div>
@@ -174,15 +180,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
 
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-black/30"
         >
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <p className="font-semibold text-black">Informacoes do Projeto:</p>
-            <p className="text-gray-700">{repository.description}</p>
-            <p className="mt-2 text-gray-700">Tecnologias: {repository.topics.join(', ')}</p>
-            <p className="mt-2 text-gray-700">Custo base mensal: $1,000</p>
-            <p className="text-gray-700">Duracao estimada: {estimatedMonths} meses</p>
-            <p className="text-gray-700">Estimativa inicial: ${projectCost}</p>
+          <div className="bg-cyan-950/30 p-4 rounded-lg border border-cyan-500/30">
+            <p className="font-semibold text-cyan-400">Análise Neural:</p>
+            <p className="text-gray-300">{repository.description}</p>
+            <p className="mt-2 text-gray-300">Áreas: {repository.topics.join(', ')}</p>
           </div>
 
           {messages.map((message, index) => (
@@ -193,8 +196,8 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
               <div
                 className={`max-w-[80%] p-3 rounded-lg ${
                   message.role === 'user'
-                    ? 'bg-black text-white'
-                    : 'bg-gray-100 text-black'
+                    ? 'bg-purple-950/30 border border-purple-500/30 text-purple-100'
+                    : 'bg-cyan-950/30 border border-cyan-500/30 text-cyan-100'
                 }`}
               >
                 {message.content}
@@ -204,23 +207,23 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
           
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 p-3 rounded-lg">
+              <div className="bg-cyan-950/30 p-3 rounded-lg border border-cyan-500/30">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-gray-800 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-cyan-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t border-cyan-500/30">
           <div className="flex space-x-2">
             <button
               onClick={isRecording ? stopRecording : startRecording}
               className={`p-2 rounded-full transition-colors ${
-                isRecording ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                isRecording ? 'bg-red-500 text-white' : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
               }`}
             >
               {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -230,13 +233,13 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black text-black bg-white"
+              placeholder="Compartilhe seus pensamentos..."
+              className="flex-1 bg-black/50 border border-cyan-500/30 rounded-lg px-4 py-2 text-cyan-100 placeholder-cyan-600 focus:outline-none focus:border-cyan-400"
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
-              className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-all duration-200"
+              className="bg-cyan-500 text-black p-2 rounded-lg hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-all duration-200"
             >
               <Send className="h-5 w-5" />
             </button>

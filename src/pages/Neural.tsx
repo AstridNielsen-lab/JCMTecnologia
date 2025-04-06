@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Brain, Activity, Wand2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Brain, Activity, Wand2, Mic, MicOff } from 'lucide-react';
+import AIChat from '../components/AIChat';
 
 interface LogEntry {
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'system';
   message: string;
   timestamp: number;
 }
@@ -10,8 +11,13 @@ interface LogEntry {
 const Neural = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [transcribedText, setTranscribedText] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const neuralCanvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const animationFrameRef = useRef<number>();
   const neuralAnimationFrameRef = useRef<number>();
 
@@ -33,11 +39,11 @@ const Neural = () => {
       const barWidth = canvas.width / bars;
       
       for (let i = 0; i < bars; i++) {
-        const height = isProcessing ? 
+        const height = isProcessing || isRecording ? 
           Math.random() * canvas.height * 0.8 : 
           canvas.height * 0.1;
         
-        ctx.fillStyle = `rgba(0, 255, 204, ${isProcessing ? 0.8 : 0.3})`;
+        ctx.fillStyle = `rgba(0, 255, 204, ${isProcessing || isRecording ? 0.8 : 0.3})`;
         ctx.fillRect(
           i * barWidth, 
           (canvas.height - height) / 2,
@@ -56,7 +62,7 @@ const Neural = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isProcessing]);
+  }, [isProcessing, isRecording]);
 
   // Neural monitor animation
   useEffect(() => {
@@ -78,7 +84,6 @@ const Neural = () => {
       ctx.strokeStyle = '#00ff00';
       ctx.lineWidth = 2;
 
-      // Generate ECG-like pattern
       const amplitude = 20;
       const frequency = 0.1;
       
@@ -89,7 +94,7 @@ const Neural = () => {
 
       const newY = canvas.height / 2 + 
         Math.sin(phase) * amplitude * 
-        (isProcessing ? 2 : 1);
+        (isProcessing || isRecording ? 2 : 1);
 
       ctx.moveTo(x - 1, y);
       ctx.lineTo(x, newY);
@@ -109,30 +114,67 @@ const Neural = () => {
         cancelAnimationFrame(neuralAnimationFrameRef.current);
       }
     };
-  }, [isProcessing]);
+  }, [isProcessing, isRecording]);
 
-  // Simulate AI interaction
-  const simulateAIInteraction = async () => {
-    setIsProcessing(true);
-    
-    const newLog: LogEntry = {
-      type: 'user',
-      message: 'Iniciando análise neural...',
-      timestamp: Date.now()
-    };
-    
-    setLogs(prev => [...prev, newLog]);
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+      mediaRecorder.ondataavailable = (event) => {
+        chunksRef.current.push(event.data);
+      };
 
-    const aiResponse: LogEntry = {
-      type: 'ai',
-      message: 'Análise neural completa. Padrões sinápticos identificados.',
-      timestamp: Date.now()
-    };
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        setTranscribedText('Processando sua fala...');
+        setShowAIChat(true);
+        
+        // In a real implementation, we would send the audio to a speech-to-text service
+        // For now, we'll simulate the transcription
+        setTimeout(() => {
+          setTranscribedText('Análise neural iniciada com base em sua fala.');
+          setLogs(prev => [...prev, {
+            type: 'user',
+            message: 'Análise neural iniciada através de comando de voz.',
+            timestamp: Date.now()
+          }]);
+        }, 1500);
 
-    setLogs(prev => [...prev, aiResponse]);
-    setIsProcessing(false);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setLogs(prev => [...prev, {
+        type: 'system',
+        message: 'Gravação de voz iniciada. Por favor, fale sobre seus pensamentos ou sentimentos.',
+        timestamp: Date.now()
+      }]);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setLogs(prev => [...prev, {
+        type: 'system',
+        message: 'Erro ao acessar o microfone. Por favor, verifique as permissões.',
+        timestamp: Date.now()
+      }]);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsProcessing(true);
+    }
+  };
+
+  const mockRepository = {
+    name: "Análise Neural",
+    description: "Sistema de análise neural baseado em psicologia, psicanálise e filosofia",
+    topics: ["psychology", "philosophy", "neural-analysis"]
   };
 
   return (
@@ -145,38 +187,51 @@ const Neural = () => {
               Interface Neural
             </h1>
             <p className="text-cyan-400 text-lg">
-              Sistema avançado de monitoramento neural e processamento de dados cerebrais.
-              Utilizando IA para análise em tempo real de padrões sinápticos.
+              Sistema avançado de análise neural com base em psicologia, psicanálise e filosofia.
+              Utilize sua voz para compartilhar pensamentos e receber uma análise profunda.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-6 hover:border-cyan-400 transition-all duration-300">
                 <div className="flex items-center space-x-3 mb-4">
                   <Brain className="h-6 w-6 text-cyan-400" />
-                  <h3 className="text-xl font-semibold text-cyan-400">Análise Neural</h3>
+                  <h3 className="text-xl font-semibold text-cyan-400">Análise Psicológica</h3>
                 </div>
                 <p className="text-gray-400">
-                  Processamento avançado de padrões neurais utilizando redes neurais artificiais de última geração.
+                  Análise profunda baseada em conceitos de psicologia e psicanálise, explorando padrões de pensamento e comportamento.
                 </p>
               </div>
               
               <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-6 hover:border-cyan-400 transition-all duration-300">
                 <div className="flex items-center space-x-3 mb-4">
                   <Activity className="h-6 w-6 text-purple-400" />
-                  <h3 className="text-xl font-semibold text-purple-400">Monitoramento</h3>
+                  <h3 className="text-xl font-semibold text-purple-400">Insights Filosóficos</h3>
                 </div>
                 <p className="text-gray-400">
-                  Acompanhamento em tempo real de atividades cerebrais e padrões sinápticos.
+                  Conexões com conceitos filosóficos relevantes para compreensão mais profunda do ser.
                 </p>
               </div>
             </div>
 
             <button
-              onClick={simulateAIInteraction}
-              className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-6 py-3 rounded-lg hover:from-cyan-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105"
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex items-center space-x-2 ${
+                isRecording 
+                  ? 'bg-red-500 hover:bg-red-600' 
+                  : 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600'
+              } text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105`}
             >
-              <Wand2 className="h-5 w-5" />
-              <span>Iniciar Análise Neural</span>
+              {isRecording ? (
+                <>
+                  <MicOff className="h-5 w-5" />
+                  <span>Parar Gravação</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="h-5 w-5" />
+                  <span>Iniciar Análise Neural</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -187,7 +242,9 @@ const Neural = () => {
                 <Brain className="h-8 w-8 text-cyan-400 animate-pulse" />
                 <div>
                   <h3 className="text-cyan-400 font-semibold">Sistema Neural</h3>
-                  <p className="text-sm text-cyan-500">Status: {isProcessing ? 'Processando' : 'Pronto'}</p>
+                  <p className="text-sm text-cyan-500">
+                    Status: {isRecording ? 'Gravando' : isProcessing ? 'Processando' : 'Pronto'}
+                  </p>
                 </div>
               </div>
 
@@ -195,13 +252,23 @@ const Neural = () => {
                 {logs.map((log, index) => (
                   <div
                     key={index}
-                    className={`log ${log.type} mb-2 p-2 rounded ${
-                      log.type === 'ai' ? 'bg-cyan-950/30' : 'bg-purple-950/30'
+                    className={`log mb-2 p-2 rounded ${
+                      log.type === 'ai' 
+                        ? 'bg-cyan-950/30' 
+                        : log.type === 'system'
+                        ? 'bg-purple-950/30'
+                        : 'bg-blue-950/30'
                     }`}
                   >
                     <div className="flex items-center space-x-2">
-                      <span className={log.type === 'ai' ? 'text-cyan-400' : 'text-purple-400'}>
-                        {log.type === 'ai' ? 'IA' : 'Usuário'}:
+                      <span className={
+                        log.type === 'ai' 
+                          ? 'text-cyan-400' 
+                          : log.type === 'system'
+                          ? 'text-purple-400'
+                          : 'text-blue-400'
+                      }>
+                        {log.type === 'ai' ? 'IA' : log.type === 'system' ? 'Sistema' : 'Você'}:
                       </span>
                       <span className="text-gray-300">{log.message}</span>
                     </div>
@@ -235,6 +302,13 @@ const Neural = () => {
           </div>
         </div>
       </div>
+
+      {showAIChat && (
+        <AIChat 
+          repository={mockRepository}
+          onClose={() => setShowAIChat(false)}
+        />
+      )}
     </div>
   );
 };
