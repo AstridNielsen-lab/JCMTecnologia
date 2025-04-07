@@ -14,6 +14,7 @@ interface AIChatProps {
 
 const API_KEY = "AIzaSyCqsdGmlJfpYAzpu8uph1VAjI51XbB5iV0";
 const genAI = new GoogleGenerativeAI(API_KEY);
+const MONTHLY_RATE = 1000; // $1000 USD per month
 
 // More conservative rate limiting configuration
 const RATE_LIMIT_DELAY = 5000; // 5 second delay between requests
@@ -73,7 +74,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     Descrição: ${repository.description}
     Tecnologias: ${repository.topics.join(', ')}
     
-    Sua taxa é de $1000 USD por mês de desenvolvimento.
+    Taxa fixa: $${MONTHLY_RATE} USD por mês de desenvolvimento.
     
     Seu papel:
     - Fornecer informações detalhadas sobre o projeto
@@ -84,10 +85,10 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     
     Ao estimar orçamentos:
     - Considere a complexidade das tecnologias envolvidas
-    - Inclua custos de desenvolvimento, testes e implantação
+    - Calcule o custo total multiplicando $${MONTHLY_RATE} pelo número de meses necessários
     - Forneça estimativas em meses e valor total em USD
-    - Explique os fatores que influenciam o custo
-    - Base sua estimativa em $1000 USD por mês
+    - Explique os fatores que influenciam o prazo
+    - Seja específico sobre as fases do desenvolvimento
     
     Mantenha um tom profissional e consultivo, focando em:
     - Valor agregado ao negócio
@@ -100,6 +101,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     - Mantenha um tom amigável mas profissional
     - Use sua experiência para justificar as estimativas
     - Seja específico sobre as tecnologias e processos
+    - SEMPRE mencione a taxa mensal de $${MONTHLY_RATE} USD
   `;
 
   const checkRateLimit = () => {
@@ -223,12 +225,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
         history: [
           {
             role: "user",
-            parts: [getProductPrompt() + "\n\nGere uma estimativa de orçamento inicial baseada nas informações do projeto."],
+            parts: [getProductPrompt() + "\n\nGere uma estimativa de orçamento inicial baseada nas informações do projeto, usando a taxa mensal de $1000 USD."],
           },
         ],
       });
 
-      const result = await chat.sendMessage("Qual seria uma estimativa inicial de orçamento para este projeto?");
+      const result = await chat.sendMessage("Considerando a taxa de $1000 USD por mês, qual seria uma estimativa inicial de orçamento para este projeto?");
       const response = await result.response;
       const estimateText = response.text();
       setEstimatedBudget(estimateText);
