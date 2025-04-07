@@ -10,8 +10,10 @@ import SplashScreen from './components/SplashScreen';
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [connectionLoss, setConnectionLoss] = useState(false);
 
   useEffect(() => {
+    // Mouse tracking for cyber grid effect
     const handleMouseMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth) * 100;
       const y = (e.clientY / window.innerHeight) * 100;
@@ -19,8 +21,24 @@ const App = () => {
       document.documentElement.style.setProperty('--mouse-y', `${y}%`);
     };
 
+    // Simulate random connection loss effects
+    const simulateConnectionLoss = () => {
+      const interval = Math.random() * 10000 + 5000; // Random interval between 5-15 seconds
+      setTimeout(() => {
+        setConnectionLoss(true);
+        setTimeout(() => {
+          setConnectionLoss(false);
+          simulateConnectionLoss();
+        }, 200); // Flash duration
+      }, interval);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    simulateConnectionLoss();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   return (
@@ -29,8 +47,17 @@ const App = () => {
         <SplashScreen onComplete={() => setShowSplash(false)} />
       ) : (
         <Router>
-          <div className="min-h-screen bg-black text-white cyber-grid">
-            <div className="relative z-10">
+          <div className="min-h-screen bg-black text-white cyber-grid film-grain">
+            {/* Vintage film effects */}
+            <div className="vignette" />
+            <div className="film-scratches" />
+            <div className="dust-particles" />
+            
+            {/* Connection loss overlay */}
+            {connectionLoss && <div className="connection-loss" />}
+            
+            {/* Main content with floating effect */}
+            <div className="content-container">
               <Navbar />
               <Routes>
                 <Route path="/" element={<Home />} />

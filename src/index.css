@@ -2,42 +2,241 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes glitch {
+:root {
+  --primary: #ff0000;
+  --primary-dark: #990000;
+  --primary-glow: #ff000033;
+  --background: #0a0000;
+  --surface: #1a0000;
+  --text: #ffffff;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Floating Animation */
+@keyframes float {
   0% {
-    clip-path: inset(50% 0 30% 0);
-    transform: skew(-2deg);
+    transform: translateY(0px) rotate(0deg);
   }
-  20% {
-    clip-path: inset(20% 0 60% 0);
-    transform: skew(2deg);
+  25% {
+    transform: translateY(-10px) rotate(0.5deg);
   }
-  40% {
-    clip-path: inset(40% 0 40% 0);
-    transform: skew(-2deg);
+  50% {
+    transform: translateY(0px) rotate(-0.5deg);
   }
-  60% {
-    clip-path: inset(60% 0 20% 0);
-    transform: skew(1deg);
-  }
-  80% {
-    clip-path: inset(10% 0 70% 0);
-    transform: skew(-1deg);
+  75% {
+    transform: translateY(10px) rotate(0.25deg);
   }
   100% {
-    clip-path: inset(50% 0 30% 0);
-    transform: skew(2deg);
+    transform: translateY(0px) rotate(0deg);
   }
+}
+
+/* Film Grain Effect */
+@keyframes filmGrain {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -2%); }
+  20% { transform: translate(2%, 2%); }
+  30% { transform: translate(-1%, 1%); }
+  40% { transform: translate(1%, -1%); }
+  50% { transform: translate(-2%, 2%); }
+  60% { transform: translate(2%, -2%); }
+  70% { transform: translate(-1%, -1%); }
+  80% { transform: translate(1%, 1%); }
+  90% { transform: translate(-2%, -2%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Vignette Effect */
+.vignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    transparent 25%,
+    rgba(0, 0, 0, 0.3) 80%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* Film Scratches */
+@keyframes filmScratches {
+  0% { background-position: 0 0; }
+  100% { background-position: 100% 100%; }
+}
+
+.film-scratches {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 11;
+  background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='scratch'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.1' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='50' intercept='-10'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23scratch)' opacity='0.05'/%3E%3C/svg%3E");
+  animation: filmScratches 0.5s steps(1) infinite;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+}
+
+/* Dust Particles */
+@keyframes dustFloat {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(-100vh) rotate(360deg);
+  }
+}
+
+.dust-particles {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.dust-particles::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle at center, white 0%, transparent 0.5%);
+  background-size: 120px 120px;
+  animation: dustFloat 20s linear infinite;
+  opacity: 0.1;
+}
+
+/* Floating Container */
+.floating-container {
+  animation: float 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Film Grain Container */
+.film-grain {
+  position: relative;
+  overflow: hidden;
+}
+
+.film-grain::after {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 400%;
+  height: 400%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  animation: filmGrain 0.5s steps(1) infinite;
+  pointer-events: none;
+  opacity: 0.15;
+  mix-blend-mode: overlay;
+}
+
+/* Glitch Effect */
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+    text-shadow: -2px 0 #ff0000, 2px 2px #0000ff;
+  }
+  20% {
+    transform: translate(-2px, 2px);
+    text-shadow: 2px -2px #ff0000, -2px 2px #0000ff;
+  }
+  40% {
+    transform: translate(-2px, -2px);
+    text-shadow: 2px 0 #ff0000, -2px -2px #0000ff;
+  }
+  60% {
+    transform: translate(2px, 2px);
+    text-shadow: -2px 2px #ff0000, 2px -2px #0000ff;
+  }
+  80% {
+    transform: translate(2px, -2px);
+    text-shadow: 2px 2px #ff0000, -2px 0 #0000ff;
+  }
+  100% {
+    transform: translate(0);
+    text-shadow: -2px 0 #ff0000, 2px 2px #0000ff;
+  }
+}
+
+/* Connection Loss Effect */
+@keyframes connectionLoss {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  25% {
+    opacity: 0.3;
+    transform: translateY(2px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-1px);
+  }
+  75% {
+    opacity: 0.4;
+    transform: translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scan Lines */
+@keyframes scanlines {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 20px;
+  }
+}
+
+/* Color Flash */
+@keyframes colorFlash {
+  0% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  50% {
+    filter: hue-rotate(45deg) brightness(1.2);
+  }
+  100% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+}
+
+/* Static Noise */
+@keyframes staticNoise {
+  0% { background-position: 0 0; }
+  100% { background-position: 100% 100%; }
 }
 
 .cyberpunk-gradient {
-  background: linear-gradient(45deg, #ff00ff, #00ffff);
+  background: linear-gradient(45deg, var(--primary), #ff4040);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  animation: glitch 5s infinite, colorFlash 8s infinite;
 }
 
 .neon-border {
-  box-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+  box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary), 0 0 30px var(--primary);
+  animation: connectionLoss 3s infinite;
 }
 
 .cyber-grid {
@@ -53,11 +252,19 @@
   right: 0;
   bottom: 0;
   background: 
-    linear-gradient(90deg, transparent 0%, rgba(0, 255, 255, 0.1) 50%, transparent 100%),
-    linear-gradient(0deg, transparent 0%, rgba(0, 255, 255, 0.1) 50%, transparent 100%);
-  background-size: 50px 50px;
-  animation: gridMove 20s linear infinite;
+    linear-gradient(90deg, transparent 0%, rgba(255, 0, 0, 0.1) 50%, transparent 100%),
+    linear-gradient(0deg, transparent 0%, rgba(255, 0, 0, 0.1) 50%, transparent 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0%,
+      transparent 1px,
+      rgba(255, 0, 0, 0.1) 1px,
+      rgba(255, 0, 0, 0.1) 2px
+    );
+  background-size: 50px 50px, 50px 50px, 100% 4px;
+  animation: gridMove 20s linear infinite, scanlines 1s linear infinite;
   pointer-events: none;
+  opacity: 0.5;
 }
 
 .cyber-grid::after {
@@ -67,12 +274,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-    rgba(0, 255, 255, 0.15) 0%,
-    rgba(0, 0, 0, 0) 60%);
+  background: 
+    radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+      rgba(255, 0, 0, 0.2) 0%,
+      rgba(0, 0, 0, 0) 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.1;
   mix-blend-mode: screen;
+  animation: staticNoise 0.5s steps(2) infinite;
 }
 
 @keyframes gridMove {
@@ -86,6 +296,7 @@
 
 .glitch-effect {
   position: relative;
+  animation: glitch 3s infinite;
 }
 
 .glitch-effect::before,
@@ -96,32 +307,163 @@
   left: 0;
   width: 100%;
   height: 100%;
+  clip: rect(0, 0, 0, 0);
 }
 
 .glitch-effect::before {
   left: 2px;
-  text-shadow: -2px 0 #ff00ff;
+  text-shadow: -2px 0 #ff0000;
   animation: glitch 0.3s infinite linear alternate-reverse;
+  background: rgba(255, 0, 0, 0.2);
 }
 
 .glitch-effect::after {
   left: -2px;
-  text-shadow: 2px 0 #00ffff;
+  text-shadow: 2px 0 #ff0000;
   animation: glitch 0.3s infinite linear alternate;
+  background: rgba(255, 0, 0, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+  box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+  box-shadow: 0 0 10px var(--primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
 }
 
 /* Neural Interface Styles */
 .cyber-interface {
-  @apply bg-black/90 border-2 border-cyan-500/30 rounded-lg p-6 backdrop-blur-md;
-  box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
-  font-family: 'Share Tech Mono', monospace;
+  @apply bg-black/90 border-2 rounded-lg p-6 backdrop-blur-md;
+  border-color: var(--primary);
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+  animation: connectionLoss 4s infinite, float 6s ease-in-out infinite;
 }
 
 .chat-logs {
-  @apply max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-black/30;
+  @apply max-h-[200px] overflow-y-auto;
+  scrollbar-color: var(--primary) var(--surface);
+  scrollbar-width: thin;
 }
 
 .voice-animation canvas,
 .neural-monitor canvas {
   image-rendering: pixelated;
+  border-color: var(--primary);
+  animation: colorFlash 5s infinite;
+}
+
+/* Custom button styles */
+.btn-primary {
+  @apply px-4 py-2 rounded-lg transition-all duration-300;
+  background: var(--primary);
+  color: white;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+  animation: connectionLoss 3s infinite;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+/* Custom input styles */
+.input-primary {
+  @apply px-4 py-2 rounded-lg transition-all duration-300;
+  background: rgba(26, 0, 0, 0.8);
+  border: 1px solid var(--primary);
+  color: white;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.input-primary:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+}
+
+/* Connection loss overlay */
+.connection-loss {
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 0, 0, 0.1) 0px,
+    rgba(255, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: scanlines 1s linear infinite;
+  z-index: 9999;
+  mix-blend-mode: overlay;
+}
+
+/* Equalizer visualization */
+.eq-bar {
+  @apply rounded-full transition-all duration-300;
+  background: linear-gradient(to top, var(--primary), var(--primary-dark));
+  box-shadow: 0 0 10px var(--primary);
+  animation: connectionLoss 2s infinite;
+}
+
+.eq-knob {
+  @apply rounded-full border-2 cursor-pointer;
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 15px var(--primary);
+}
+
+.eq-knob:hover {
+  box-shadow: 0 0 25px var(--primary);
+}
+
+/* Add glitch effect to all text elements */
+h1, h2, h3, h4, h5, h6, p, span, a {
+  position: relative;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+}
+
+/* Add connection loss effect to all cards and containers */
+.bg-black, .bg-surface-dark, .cyber-interface {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.bg-black::after, .bg-surface-dark::after, .cyber-interface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 0, 0, 0.05) 0px,
+    rgba(255, 0, 0, 0.05) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: scanlines 1s linear infinite;
+  z-index: 1;
+}
+
+/* Content container with floating effect */
+.content-container {
+  @apply relative z-10;
+  animation: float 6s ease-in-out infinite;
 }
