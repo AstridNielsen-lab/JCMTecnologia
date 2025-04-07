@@ -7,6 +7,7 @@ import Products from './pages/Products';
 import About from './pages/About';
 import Neural from './pages/Neural';
 import SplashScreen from './components/SplashScreen';
+import TechChat from './components/TechChat';
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -69,6 +70,9 @@ const App = () => {
               </Routes>
               <Footer />
             </div>
+
+            {/* Tech Improvement Chat */}
+            <TechChat />
           </div>
         </Router>
       )}

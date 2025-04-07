@@ -15,6 +15,7 @@ import {
   Radar
 } from 'lucide-react';
 import UltrasonicMapping from '../components/UltrasonicMapping';
+import NetworkScanner from '../components/NetworkScanner';
 
 const Home = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,10 +144,10 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-surface-dark relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 hex-grid opacity-20" />
-      <div className="absolute inset-0 data-lines opacity-10" />
+      <div className="absolute inset-0 hex-grid opacity-30" />
+      <div className="absolute inset-0 data-lines" />
+      <div className="absolute inset-0 bg-grid-pattern" />
       
-      {/* Main HUD Interface */}
       <div className="relative min-h-screen p-4 sm:p-8">
         <div className="max-w-[1400px] mx-auto grid grid-cols-12 gap-4 h-full">
           {/* Left Column */}
@@ -172,19 +173,8 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Radar Display */}
-            <div className="hud-border p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-primary text-lg font-bold">Network Radar</h3>
-                <Radar className="text-primary h-5 w-5" />
-              </div>
-              <canvas
-                ref={radarRef}
-                width={300}
-                height={200}
-                className="w-full h-[200px] rounded border border-primary/30"
-              />
-            </div>
+            {/* Network Scanner */}
+            <NetworkScanner />
           </div>
 
           {/* Center Column */}
