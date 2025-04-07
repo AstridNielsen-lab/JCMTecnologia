@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Brain, Activity, Mic, MicOff, Send, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Brain, Activity, Mic, MicOff, Send, Volume2, VolumeX, Search, Filter, MessageSquare, Cpu } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface Message {
@@ -14,135 +14,52 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const SPEECH_PAUSE_THRESHOLD = 1500; // 1.5 seconds of silence to trigger send
 const MIN_SPEECH_LENGTH = 3; // Minimum number of characters to consider as valid speech
 
+// Sound effects URLs
+const HOVER_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3';
+const CLICK_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+
 const Neural = () => {
-  const [logs, setLogs] = useState<{ type: 'user' | 'ai' | 'system'; message: string; timestamp: number; }[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [lastSpeechTime, setLastSpeechTime] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
   
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const neuralCanvasRef = useRef<HTMLCanvasElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const animationFrameRef = useRef<number>();
-  const neuralAnimationFrameRef = useRef<number>();
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverSoundRef = useRef<HTMLAudioElement | null>(null);
+  const clickSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Voice animation effect
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    // Initialize sound effects
+    hoverSoundRef.current = new Audio(HOVER_SOUND);
+    clickSoundRef.current = new Audio(CLICK_SOUND);
+    
+    // Preload sounds
+    hoverSoundRef.current.load();
+    clickSoundRef.current.load();
+  }, []);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const drawVoiceWave = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
-      ctx.strokeStyle = 'var(--primary)';
-      ctx.lineWidth = 2;
-
-      const bars = 30;
-      const barWidth = canvas.width / bars;
-      
-      for (let i = 0; i < bars; i++) {
-        const height = isProcessing || isRecording ? 
-          Math.random() * canvas.height * 0.8 : 
-          canvas.height * 0.1;
-        
-        ctx.fillStyle = `rgba(255, 23, 68, ${isProcessing || isRecording ? 0.8 : 0.3})`;
-        ctx.fillRect(
-          i * barWidth, 
-          (canvas.height - height) / 2,
-          barWidth - 2,
-          height
-        );
-      }
-
-      animationFrameRef.current = requestAnimationFrame(drawVoiceWave);
-    };
-
-    drawVoiceWave();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isProcessing, isRecording]);
-
-  // Neural monitor animation
-  useEffect(() => {
-    const canvas = neuralCanvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let x = 0;
-    let y = canvas.height / 2;
-    let phase = 0;
-
-    const drawNeuralMonitor = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.beginPath();
-      ctx.strokeStyle = 'var(--primary)';
-      ctx.lineWidth = 2;
-
-      const amplitude = 20;
-      const frequency = 0.1;
-      
-      if (x >= canvas.width) {
-        x = 0;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-
-      const newY = canvas.height / 2 + 
-        Math.sin(phase) * amplitude * 
-        (isProcessing || isRecording ? 2 : 1);
-
-      ctx.moveTo(x - 1, y);
-      ctx.lineTo(x, newY);
-      ctx.stroke();
-
-      x += 2;
-      y = newY;
-      phase += frequency;
-
-      neuralAnimationFrameRef.current = requestAnimationFrame(drawNeuralMonitor);
-    };
-
-    drawNeuralMonitor();
-
-    return () => {
-      if (neuralAnimationFrameRef.current) {
-        cancelAnimationFrame(neuralAnimationFrameRef.current);
-      }
-    };
-  }, [isProcessing, isRecording]);
-
-  const handleSpeechPause = async () => {
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current);
-      pauseTimeoutRef.current = null;
-    }
-
-    if (currentTranscript.length >= MIN_SPEECH_LENGTH) {
-      setInput(currentTranscript);
-      await handleSend(currentTranscript);
-      setCurrentTranscript('');
+  const playHoverSound = () => {
+    if (hoverSoundRef.current) {
+      hoverSoundRef.current.currentTime = 0;
+      hoverSoundRef.current.play();
     }
   };
 
-  // Speech recognition setup with pause detection
+  const playClickSound = () => {
+    if (clickSoundRef.current) {
+      clickSoundRef.current.currentTime = 0;
+      clickSoundRef.current.play();
+    }
+  };
+
+  // Speech recognition setup
   useEffect(() => {
     if (isRecording) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -166,14 +83,10 @@ const Neural = () => {
           
           setCurrentTranscript(transcript);
           setInput(transcript);
-          setLastSpeechTime(Date.now());
 
-          // Reset the pause timeout
           if (pauseTimeoutRef.current) {
             clearTimeout(pauseTimeoutRef.current);
           }
-
-          // Set a new pause timeout
           pauseTimeoutRef.current = setTimeout(handleSpeechPause, SPEECH_PAUSE_THRESHOLD);
         };
 
@@ -197,7 +110,6 @@ const Neural = () => {
       }
       if (pauseTimeoutRef.current) {
         clearTimeout(pauseTimeoutRef.current);
-        pauseTimeoutRef.current = null;
       }
     }
 
@@ -207,10 +119,16 @@ const Neural = () => {
       }
       if (pauseTimeoutRef.current) {
         clearTimeout(pauseTimeoutRef.current);
-        pauseTimeoutRef.current = null;
       }
     };
   }, [isRecording]);
+
+  const handleSpeechPause = async () => {
+    if (currentTranscript.length >= MIN_SPEECH_LENGTH) {
+      await handleSend(currentTranscript);
+      setCurrentTranscript('');
+    }
+  };
 
   const speakMessage = (text: string) => {
     if (speechSynthesis.speaking) {
@@ -246,6 +164,7 @@ const Neural = () => {
     const messageText = text || input;
     if (!messageText.trim() || messageText === 'Ouvindo... Fale agora') return;
 
+    playClickSound();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: messageText }]);
     setIsProcessing(true);
@@ -285,166 +204,196 @@ const Neural = () => {
     }
   };
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+  const categories = [
+    'Psicologia',
+    'Psicanálise',
+    'Filosofia',
+    'Comportamento',
+    'Emoções',
+    'Cognição'
+  ];
+
+  const analysisCards = [
+    {
+      title: 'Análise Comportamental',
+      description: 'Compreenda padrões de comportamento e suas origens psicológicas',
+      icon: Brain
+    },
+    {
+      title: 'Insights Emocionais',
+      description: 'Explore a profundidade das emoções e seus significados',
+      icon: Activity
+    },
+    {
+      title: 'Padrões Cognitivos',
+      description: 'Identifique e analise padrões de pensamento',
+      icon: Cpu
     }
-  }, [messages]);
+  ];
 
   return (
-    <div className="min-h-screen bg-surface-dark py-6 sm:py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* Main Content */}
-          <div className="space-y-6 sm:space-y-8">
-            <h1 className="text-3xl sm:text-4xl font-bold cyberpunk-gradient">
-              Interface Neural
-            </h1>
-            <p className="text-gray-300 text-base sm:text-lg">
-              Sistema avançado de análise neural com base em psicologia, psicanálise e filosofia.
-              Utilize sua voz para compartilhar pensamentos e receber uma análise profunda.
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-surface/50 border border-primary/30 rounded-lg p-4 sm:p-6 hover:border-primary transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-3 sm:mb-4">
-                  <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-primary">Análise Psicológica</h3>
-                </div>
-                <p className="text-gray-400 text-sm sm:text-base">
-                  Análise profunda baseada em conceitos de psicologia e psicanálise, explorando padrões de pensamento e comportamento.
-                </p>
-              </div>
-              
-              <div className="bg-surface/50 border border-primary/30 rounded-lg p-4 sm:p-6 hover:border-primary transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-3 sm:mb-4">
-                  <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-primary">Insights Filosóficos</h3>
-                </div>
-                <p className="text-gray-400 text-sm sm:text-base">
-                  Conexões com conceitos filosóficos relevantes para compreensão mais profunda do ser.
-                </p>
-              </div>
+    <div className="min-h-screen bg-surface-dark py-16 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 hex-grid opacity-30" />
+      <div className="absolute inset-0 data-lines" />
+      <div className="absolute inset-0 bg-grid-pattern" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        {/* Header */}
+        <div className="mb-12 relative">
+          <div className="absolute -left-4 -top-4 w-20 h-20 border-l-2 border-t-2 border-primary opacity-50" />
+          <div className="absolute -right-4 -top-4 w-20 h-20 border-r-2 border-t-2 border-primary opacity-50" />
+          <h1 className="text-4xl font-bold text-center text-primary text-glow mb-2">Interface Neural</h1>
+          <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent box-glow" />
+        </div>
+
+        {/* Search and Filter Section */}
+        <div className="mb-12 hud-border rounded-lg p-6 scanner">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Buscar análises..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-surface/50 border border-primary/30 rounded-lg focus:outline-none focus:border-primary text-primary placeholder-primary/50"
+              />
             </div>
-
-            <button
-              onClick={() => setIsChatExpanded(!isChatExpanded)}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
-            >
-              <Brain className="h-5 w-5" />
-              <span>{isChatExpanded ? 'Fechar Análise' : 'Iniciar Análise Neural'}</span>
-            </button>
-
-            {/* Chat Interface */}
-            <div className={`transition-all duration-500 overflow-hidden ${
-              isChatExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-            }`}>
-              <div className="cyber-interface mt-6">
-                <div 
-                  ref={chatContainerRef}
-                  className="chat-logs mb-4 space-y-4"
-                >
-                  {messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[85%] p-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-primary/20 border border-primary/30'
-                          : 'bg-surface border border-primary/30'
-                      }`}>
-                        <p className="text-white">{message.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {isProcessing && (
-                    <div className="flex justify-start">
-                      <div className="bg-surface p-3 rounded-lg border border-primary/30">
-                        <div className="flex space-x-2">
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={`p-2 rounded-full transition-colors ${
-                      isRecording ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
-                    }`}
-                  >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                  </button>
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Digite sua mensagem ou use o microfone..."
-                    className="flex-1 bg-surface border border-primary/30 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                  />
-                  <button
-                    onClick={() => handleSend()}
-                    disabled={!input.trim() || input === 'Ouvindo... Fale agora'}
-                    className="bg-primary text-white p-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
-                  >
-                    <Send className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={isSpeaking ? stopSpeaking : () => {
-                      const lastAssistantMessage = messages.findLast(m => m.role === 'assistant');
-                      if (lastAssistantMessage) speakMessage(lastAssistantMessage.content);
-                    }}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isSpeaking ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
-                    }`}
-                  >
-                    {isSpeaking ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <Filter className="text-primary h-5 w-5" />
+              <span className="text-primary font-medium">Filtrar por:</span>
             </div>
           </div>
 
-          {/* Neural Interface */}
-          <div className="relative mt-6 lg:mt-0">
-            <div className="cyber-interface">
-              <div className="neural-header flex items-center space-x-4 mb-6">
-                <Brain className="h-8 w-8 text-primary animate-pulse" />
-                <div>
-                  <h3 className="text-lg text-primary font-semibold">Sistema Neural</h3>
-                  <p className="text-sm text-gray-400">
-                    Status: {isRecording ? 'Gravando' : isProcessing ? 'Processando' : 'Pronto'}
-                  </p>
+          <div className="flex flex-wrap gap-2">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => {
+                  playClickSound();
+                  setSelectedCategory(prev =>
+                    prev.includes(category)
+                      ? prev.filter(c => c !== category)
+                      : [...prev, category]
+                  );
+                }}
+                onMouseEnter={playHoverSound}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                  selectedCategory.includes(category)
+                    ? 'bg-primary text-surface-dark box-glow'
+                    : 'bg-surface/50 text-primary border border-primary/30 hover:border-primary'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Analysis Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {analysisCards.map((card, index) => (
+            <div
+              key={index}
+              className="hud-border rounded-lg overflow-hidden scanner group cursor-pointer"
+              onClick={() => playClickSound()}
+              onMouseEnter={playHoverSound}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-primary text-glow">
+                    {card.title}
+                  </h3>
+                  <card.icon className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-primary/80 mb-4">{card.description}</p>
+                <div className="h-1 w-full bg-primary/20 rounded">
+                  <div className="h-full w-2/3 bg-primary rounded animate-pulse" />
                 </div>
               </div>
-
-              <div className="voice-animation mb-6">
-                <p className="text-sm text-gray-400 mb-2">Análise de Voz</p>
-                <canvas
-                  ref={canvasRef}
-                  width={280}
-                  height={60}
-                  className="w-full bg-surface rounded border"
-                />
-              </div>
-
-              <div className="neural-monitor">
-                <p className="text-sm text-gray-400 mb-2">Monitor Neural</p>
-                <canvas
-                  ref={neuralCanvasRef}
-                  width={280}
-                  height={60}
-                  className="w-full bg-surface rounded border"
-                />
-              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Chat Interface */}
+        <div className="hud-border rounded-lg p-6 scanner">
+          <div
+            ref={chatContainerRef}
+            className="mb-6 space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface/30"
+          >
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[85%] p-4 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-primary/20 border border-primary/30'
+                    : 'bg-surface/50 border border-primary/30'
+                }`}>
+                  <p className="text-white">{message.content}</p>
+                </div>
+              </div>
+            ))}
+            
+            {isProcessing && (
+              <div className="flex justify-start">
+                <div className="bg-surface/50 p-4 rounded-lg border border-primary/30">
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex space-x-2">
+            <button
+              onClick={() => {
+                playClickSound();
+                setIsRecording(!isRecording);
+              }}
+              onMouseEnter={playHoverSound}
+              className={`p-3 rounded-lg transition-colors ${
+                isRecording ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
+              }`}
+            >
+              {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+            </button>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Digite sua mensagem ou use o microfone..."
+              className="flex-1 bg-surface/50 border border-primary/30 rounded-lg px-4 py-2 text-white placeholder-primary/50 focus:outline-none focus:border-primary"
+            />
+            <button
+              onClick={() => handleSend()}
+              onMouseEnter={playHoverSound}
+              disabled={!input.trim() || input === 'Ouvindo... Fale agora'}
+              className="bg-primary text-surface-dark p-3 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
+            >
+              <Send className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => {
+                playClickSound();
+                isSpeaking ? stopSpeaking() : (() => {
+                  const lastAssistantMessage = messages.findLast(m => m.role === 'assistant');
+                  if (lastAssistantMessage) speakMessage(lastAssistantMessage.content);
+                })();
+              }}
+              onMouseEnter={playHoverSound}
+              className={`p-3 rounded-lg transition-colors ${
+                isSpeaking ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
+              }`}
+            >
+              {isSpeaking ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </div>
