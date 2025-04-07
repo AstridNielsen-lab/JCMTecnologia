@@ -77,7 +77,7 @@ const NetworkScanner = () => {
   // Network speed test using the Network Information API and custom measurements
   const measureNetworkSpeed = async () => {
     try {
-      const testNetworkSpeed = new NetworkSpeed();
+      const testNetworkSpeed = new NetworkSpeed('https://www.speedtest.net/');
       
       const downloadSpeed = await testNetworkSpeed.checkDownloadSpeed();
       const uploadSpeed = await testNetworkSpeed.checkUploadSpeed();

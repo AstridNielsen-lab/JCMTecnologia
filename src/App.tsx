@@ -8,6 +8,8 @@ import About from './pages/About';
 import Neural from './pages/Neural';
 import SplashScreen from './components/SplashScreen';
 import TechChat from './components/TechChat';
+import ConsentBanner from './components/ConsentBanner';
+import PermissionsBanner from './components/PermissionsBanner';
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -59,6 +61,10 @@ const App = () => {
             
             {/* Navigation */}
             <Navbar />
+            
+            {/* Permission and Cookie Banners */}
+            <PermissionsBanner />
+            <ConsentBanner />
             
             {/* Main content with floating effect and top padding for fixed navbar */}
             <div className="content-container pt-16">
