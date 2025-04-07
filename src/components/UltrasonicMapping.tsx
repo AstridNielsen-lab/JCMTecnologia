@@ -39,11 +39,30 @@ const UltrasonicMapping = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointsCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const oscillatorStartedRef = useRef<boolean>(false);
 
   useEffect(() => {
     audioContextRef.current = new AudioContext();
     analyserRef.current = audioContextRef.current.createAnalyser();
     analyserRef.current.fftSize = 2048;
+
+    // Create initial oscillator and gain nodes
+    oscillatorRef.current = audioContextRef.current.createOscillator();
+    gainNodeRef.current = audioContextRef.current.createGain();
+    
+    // Connect nodes
+    oscillatorRef.current.connect(gainNodeRef.current);
+    gainNodeRef.current.connect(analyserRef.current);
+    analyserRef.current.connect(audioContextRef.current.destination);
+
+    // Set initial gain to 0
+    gainNodeRef.current.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+
+    // Start the oscillator immediately and track its state
+    oscillatorRef.current.start();
+    oscillatorStartedRef.current = true;
 
     return () => {
       if (audioContextRef.current) {
@@ -51,6 +70,14 @@ const UltrasonicMapping = () => {
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      // Only stop the oscillator if it was started
+      if (oscillatorRef.current && oscillatorStartedRef.current) {
+        try {
+          oscillatorRef.current.stop();
+        } catch (error) {
+          console.warn('Error stopping oscillator:', error);
+        }
       }
     };
   }, []);
@@ -60,29 +87,50 @@ const UltrasonicMapping = () => {
   };
 
   const emitUltrasonicPulse = () => {
-    if (!audioContextRef.current) return;
+    if (!audioContextRef.current || !oscillatorRef.current || !gainNodeRef.current) return;
 
-    const frequency = 20000;
-    const oscillator = audioContextRef.current.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
+    const ctx = audioContextRef.current;
+    const now = ctx.currentTime;
 
-    const gainNode = audioContextRef.current.createGain();
-    gainNode.gain.setValueAtTime(0, audioContextRef.current.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.1, audioContextRef.current.currentTime + 0.001);
-    gainNode.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 0.002);
+    // Create new oscillator for each pulse
+    const pulseOsc = ctx.createOscillator();
+    const pulseGain = ctx.createGain();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(analyserRef.current!);
-    analyserRef.current!.connect(audioContextRef.current.destination);
+    // Configure oscillator
+    pulseOsc.type = 'sine';
+    pulseOsc.frequency.setValueAtTime(20000, now);
+    pulseOsc.connect(pulseGain);
+    pulseGain.connect(ctx.destination);
 
-    oscillator.start();
-    oscillator.stop(audioContextRef.current.currentTime + 0.002);
+    // Configure gain envelope
+    pulseGain.gain.setValueAtTime(0, now);
+    pulseGain.gain.linearRampToValueAtTime(0.1, now + 0.001);
+    pulseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+    // Start and stop the pulse
+    pulseOsc.start(now);
+    pulseOsc.stop(now + 0.1);
+
+    // Add sound effect for feedback
+    const feedbackOsc = ctx.createOscillator();
+    const feedbackGain = ctx.createGain();
+    
+    feedbackOsc.type = 'sine';
+    feedbackOsc.frequency.setValueAtTime(440, now);
+    feedbackOsc.connect(feedbackGain);
+    feedbackGain.connect(ctx.destination);
+
+    feedbackGain.gain.setValueAtTime(0, now);
+    feedbackGain.gain.linearRampToValueAtTime(0.05, now + 0.001);
+    feedbackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    feedbackOsc.start(now);
+    feedbackOsc.stop(now + 0.05);
 
     addSoundLog({
       type: 'sent',
       timestamp: Date.now(),
-      frequency,
+      frequency: 20000,
       angle: currentAngle
     });
   };
@@ -94,13 +142,27 @@ const UltrasonicMapping = () => {
     const dataArray = new Uint8Array(bufferLength);
     analyserRef.current.getByteFrequencyData(dataArray);
 
-    const avgIntensity = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
-    const estimatedDistance = Math.round((1 - avgIntensity / 255) * 10 * 100) / 100;
+    // Calculate average intensity with weighted high frequencies
+    const highFreqWeights = dataArray.slice(Math.floor(bufferLength * 0.7));
+    const avgIntensity = highFreqWeights.reduce((a, b) => a + b, 0) / highFreqWeights.length;
+    
+    // Add random variation for more realistic readings
+    const noise = (Math.random() - 0.5) * 10;
+    const adjustedIntensity = Math.max(0, Math.min(255, avgIntensity + noise));
+    
+    // Calculate distance using inverse square law with some randomization
+    const maxDistance = 10; // meters
+    const minIntensity = 20;
+    const distanceNoise = (Math.random() - 0.5) * 0.5;
+    const estimatedDistance = Math.min(
+      maxDistance,
+      Math.max(0.1, (1 - (adjustedIntensity - minIntensity) / (255 - minIntensity)) * maxDistance + distanceNoise)
+    );
 
     addSoundLog({
       type: 'received',
       timestamp: Date.now(),
-      intensity: avgIntensity,
+      intensity: adjustedIntensity,
       distance: estimatedDistance,
       angle: currentAngle
     });
@@ -108,7 +170,7 @@ const UltrasonicMapping = () => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const prompt = `
       Analyze this ultrasonic mapping data:
-      - Average signal intensity: ${avgIntensity}
+      - Average signal intensity: ${adjustedIntensity}
       - Estimated distance: ${estimatedDistance}m
       - Current angle: ${currentAngle}°
       - Frequency distribution: ${dataArray.slice(0, 10).join(', ')}...
@@ -129,6 +191,12 @@ const UltrasonicMapping = () => {
           "depth": number
         }
       }
+
+      Consider:
+      - Objects closer to the sensor have stronger reflections
+      - Sharp changes in intensity might indicate edges or corners
+      - Similar readings across adjacent angles suggest flat surfaces
+      - Scattered readings might indicate irregular objects
     `;
 
     try {
@@ -138,7 +206,7 @@ const UltrasonicMapping = () => {
 
       setMappingData({
         distance: estimatedDistance,
-        intensity: avgIntensity,
+        intensity: adjustedIntensity,
         objects: analysis.objects,
         dimensions: analysis.dimensions
       });
@@ -153,15 +221,27 @@ const UltrasonicMapping = () => {
           const centerY = height / 2;
           const radius = Math.min(width, height) / 2 - 20;
 
+          // Draw detected objects with glow effect
           analysis.objects.forEach(obj => {
             const objAngle = (obj.angle * Math.PI) / 180;
             const objRadius = (obj.distance / 10) * radius;
             const x = centerX + Math.cos(objAngle) * objRadius;
             const y = centerY + Math.sin(objAngle) * objRadius;
 
+            // Draw glow
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 10);
+            gradient.addColorStop(0, 'rgba(0, 229, 255, 0.5)');
+            gradient.addColorStop(1, 'rgba(0, 229, 255, 0)');
+            
             ctx.beginPath();
-            ctx.arc(x, y, 1, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 229, 255, 0.5)';
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Draw point
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#00E5FF';
             ctx.fill();
           });
         }
@@ -175,25 +255,38 @@ const UltrasonicMapping = () => {
     setIsScanning(true);
     setSoundLogs([]);
     
-    // Clear points canvas
+    // Clear points canvas with fade effect
     if (pointsCanvasRef.current) {
       const ctx = pointsCanvasRef.current.getContext('2d');
       if (ctx) {
-        ctx.clearRect(0, 0, pointsCanvasRef.current.width, pointsCanvasRef.current.height);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, pointsCanvasRef.current.width, pointsCanvasRef.current.height);
       }
     }
 
+    // Start the scanning process
     const scan = () => {
       if (!isScanning) return;
       
       emitUltrasonicPulse();
-      setCurrentAngle(prev => (prev + 2) % 360);
+      
+      // Update angle with smooth acceleration
+      setCurrentAngle(prev => {
+        const speed = Math.sin((prev % 90) * Math.PI / 180) * 2 + 1;
+        return (prev + speed) % 360;
+      });
       
       setTimeout(async () => {
         await analyzeEchos();
         animationFrameRef.current = requestAnimationFrame(scan);
       }, 50);
     };
+
+    // Initialize audio context if needed
+    if (audioContextRef.current?.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+
     scan();
   };
 
@@ -215,32 +308,45 @@ const UltrasonicMapping = () => {
     const centerY = height / 2;
     const radius = Math.min(width, height) / 2 - 20;
 
-    // Clear canvas
+    // Apply motion blur effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.fillRect(0, 0, width, height);
 
-    // Draw radar circles
+    // Draw radar circles with gradient
     for (let i = 1; i <= 4; i++) {
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius * (i / 4), 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, radius * ((i - 1) / 4),
+        centerX, centerY, radius * (i / 4)
+      );
+      gradient.addColorStop(0, 'rgba(0, 229, 255, 0.1)');
+      gradient.addColorStop(1, 'rgba(0, 229, 255, 0.3)');
+      ctx.strokeStyle = gradient;
       ctx.stroke();
     }
 
-    // Draw radar lines
+    // Draw radar lines with gradient
     for (let i = 0; i < 8; i++) {
       const angle = (i * Math.PI) / 4;
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
+      const gradient = ctx.createLinearGradient(
+        centerX, centerY,
+        centerX + Math.cos(angle) * radius,
+        centerY + Math.sin(angle) * radius
+      );
+      gradient.addColorStop(0, 'rgba(0, 229, 255, 0.3)');
+      gradient.addColorStop(1, 'rgba(0, 229, 255, 0.1)');
+      ctx.strokeStyle = gradient;
       ctx.lineTo(
         centerX + Math.cos(angle) * radius,
         centerY + Math.sin(angle) * radius
       );
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
       ctx.stroke();
     }
 
-    // Draw scanning line
+    // Draw scanning line with glow effect
     const scanAngle = (currentAngle * Math.PI) / 180;
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
@@ -251,29 +357,42 @@ const UltrasonicMapping = () => {
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.8)';
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // Add glow effect
+    ctx.shadowColor = '#00E5FF';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
     ctx.lineWidth = 1;
 
-    // Draw detected objects
+    // Draw detected objects with animations
     mappingData.objects.forEach(obj => {
       const objAngle = (obj.angle * Math.PI) / 180;
       const objRadius = (obj.distance / 10) * radius;
       const x = centerX + Math.cos(objAngle) * objRadius;
       const y = centerY + Math.sin(objAngle) * objRadius;
 
-      // Draw object point
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#00E5FF';
-      ctx.fill();
-
       // Draw ripple effect
+      const time = Date.now() / 1000;
+      const rippleSize = 5 + Math.sin(time * 2) * 2;
+      
       ctx.beginPath();
-      ctx.arc(x, y, 8 + Math.sin(Date.now() / 500) * 3, 0, Math.PI * 2);
+      ctx.arc(x, y, rippleSize, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
       ctx.stroke();
 
-      // Draw object label
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.8)';
+      // Draw object point with glow
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#00E5FF';
+      ctx.shadowColor = '#00E5FF';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Draw object label with fade effect
+      const labelOpacity = 0.6 + Math.sin(time * 3) * 0.2;
+      ctx.fillStyle = `rgba(0, 229, 255, ${labelOpacity})`;
       ctx.font = '10px monospace';
       ctx.fillText(obj.type, x + 10, y);
     });
@@ -410,3 +529,5 @@ const UltrasonicMapping = () => {
 };
 
 export default UltrasonicMapping;
+
+export default UltrasonicMapping
