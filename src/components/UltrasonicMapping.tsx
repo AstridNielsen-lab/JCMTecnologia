@@ -529,5 +529,3 @@ const UltrasonicMapping = () => {
 };
 
 export default UltrasonicMapping;
-
-export default UltrasonicMapping

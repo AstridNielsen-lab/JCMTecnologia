@@ -14,21 +14,16 @@ import {
   Activity
 } from 'lucide-react';
 import NetworkSpeed from 'network-speed';
-import mdns from 'mdns-js';
-import { ping } from 'ping';
-import { getArpTable } from 'node-arp';
 
 interface NetworkDevice {
   id: string;
   name: string;
   type: 'smartphone' | 'laptop' | 'desktop' | 'printer' | 'router' | 'server' | 'unknown';
   ipAddress: string;
-  macAddress: string;
   lastSeen: Date;
   status: 'online' | 'offline' | 'idle';
   signalStrength?: number;
   manufacturer?: string;
-  openPorts?: number[];
   responseTime?: number;
 }
 
@@ -93,11 +88,15 @@ const NetworkScanner = () => {
       const downlink = connection?.downlink || 0;
       const rtt = connection?.rtt || 0;
 
-      // Measure packet loss
-      const packetLoss = await measurePacketLoss();
+      // Simulate packet loss based on connection quality
+      const packetLoss = effectiveType === '4g' ? 0 : 
+                        effectiveType === '3g' ? 5 :
+                        effectiveType === '2g' ? 15 : 0;
       
-      // Get WiFi signal strength if available
-      const signalStrength = await getWifiSignalStrength();
+      // Simulate WiFi signal strength based on connection quality
+      const signalStrength = effectiveType === '4g' ? 90 : 
+                            effectiveType === '3g' ? 60 :
+                            effectiveType === '2g' ? 30 : 75;
 
       setNetworkStats({
         downloadSpeed: downloadSpeed.mbps,
@@ -111,145 +110,55 @@ const NetworkScanner = () => {
     }
   };
 
-  // Measure packet loss by sending ping requests
-  const measurePacketLoss = async () => {
-    try {
-      const hosts = ['8.8.8.8', '1.1.1.1'];
-      const results = await Promise.all(
-        hosts.map(host => ping.promise.probe(host))
-      );
-      
-      const packetLoss = results.reduce((acc, result) => 
-        acc + (result.alive ? 0 : 100), 0) / results.length;
-      
-      return packetLoss;
-    } catch (error) {
-      console.error('Error measuring packet loss:', error);
-      return 0;
-    }
-  };
-
-  // Get WiFi signal strength
-  const getWifiSignalStrength = async () => {
-    try {
-      if ('wifi' in navigator) {
-        const wifi = (navigator as any).wifi;
-        const status = await wifi.getStatus();
-        return status.signalStrength;
-      }
-      return 0;
-    } catch (error) {
-      console.error('Error getting WiFi signal strength:', error);
-      return 0;
-    }
-  };
-
-  // Scan for network devices using various methods
+  // Simulate network scan using sample data
   const scanNetwork = async () => {
     setIsScanning(true);
     setScanProgress(0);
-    const discoveredDevices: NetworkDevice[] = [];
 
     try {
       // Get local network information
       const localIp = await getLocalIpAddress();
       setLocalIp(localIp);
       
-      // Start mDNS discovery
-      const browser = mdns.createBrowser();
-      
-      browser.on('ready', () => {
-        browser.discover();
-      });
-
-      browser.on('update', (data) => {
-        if (data.addresses && data.addresses.length > 0) {
-          const device: NetworkDevice = {
-            id: data.addresses[0],
-            name: data.name || 'Unknown Device',
-            type: determineDeviceType(data),
-            ipAddress: data.addresses[0],
-            macAddress: 'Discovering...',
-            lastSeen: new Date(),
-            status: 'online'
-          };
-          
-          discoveredDevices.push(device);
-          setDevices([...discoveredDevices]);
-          setScanProgress((discoveredDevices.length / 254) * 100);
+      // Simulate device discovery with sample data
+      const sampleDevices: NetworkDevice[] = [
+        {
+          id: '1',
+          name: 'Your Device',
+          type: 'laptop',
+          ipAddress: localIp,
+          lastSeen: new Date(),
+          status: 'online',
+          signalStrength: 100,
+          manufacturer: 'Unknown',
+          responseTime: 1
+        },
+        {
+          id: '2',
+          name: 'Router',
+          type: 'router',
+          ipAddress: localIp.replace(/\d+$/, '1'),
+          lastSeen: new Date(),
+          status: 'online',
+          signalStrength: 95,
+          manufacturer: 'Generic Router',
+          responseTime: 2
         }
-      });
+      ];
 
-      // Scan IP range
-      const baseIp = localIp.substring(0, localIp.lastIndexOf('.'));
-      const promises = [];
-
-      for (let i = 1; i <= 254; i++) {
-        const ip = `${baseIp}.${i}`;
-        promises.push(scanIp(ip, discoveredDevices));
+      // Simulate progressive device discovery
+      for (let i = 0; i < sampleDevices.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setDevices(devices => [...devices, sampleDevices[i]]);
+        setScanProgress(((i + 1) / sampleDevices.length) * 100);
       }
 
-      await Promise.all(promises);
-
-      // Get ARP table
-      const arpTable = await getArpTable();
-      
-      // Update devices with MAC addresses and manufacturers
-      const updatedDevices = discoveredDevices.map(device => {
-        const arpEntry = arpTable.find(entry => entry.ip === device.ipAddress);
-        if (arpEntry) {
-          device.macAddress = arpEntry.mac;
-          device.manufacturer = arpEntry.vendor;
-        }
-        return device;
-      });
-
-      setDevices(updatedDevices);
-      browser.stop();
     } catch (error) {
       console.error('Error scanning network:', error);
     } finally {
       setIsScanning(false);
       setScanProgress(100);
     }
-  };
-
-  // Scan individual IP
-  const scanIp = async (ip: string, discoveredDevices: NetworkDevice[]) => {
-    try {
-      const result = await ping.promise.probe(ip);
-      
-      if (result.alive) {
-        const device: NetworkDevice = {
-          id: ip,
-          name: `Device at ${ip}`,
-          type: 'unknown',
-          ipAddress: ip,
-          macAddress: 'Discovering...',
-          lastSeen: new Date(),
-          status: 'online',
-          responseTime: result.time
-        };
-        
-        discoveredDevices.push(device);
-        setDevices([...discoveredDevices]);
-        setScanProgress((discoveredDevices.length / 254) * 100);
-      }
-    } catch (error) {
-      console.error(`Error scanning IP ${ip}:`, error);
-    }
-  };
-
-  // Determine device type based on mDNS data
-  const determineDeviceType = (data: any): NetworkDevice['type'] => {
-    const services = data.type?.toLowerCase() || '';
-    if (services.includes('printer')) return 'printer';
-    if (services.includes('workstation')) return 'desktop';
-    if (services.includes('mobile')) return 'smartphone';
-    if (services.includes('laptop')) return 'laptop';
-    if (services.includes('server')) return 'server';
-    if (services.includes('router')) return 'router';
-    return 'unknown';
   };
 
   // Monitor active connections
@@ -425,10 +334,6 @@ const NetworkScanner = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-primary/70">IP Address</span>
                     <span className="text-primary">{device.ipAddress}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-primary/70">MAC Address</span>
-                    <span className="text-primary">{device.macAddress}</span>
                   </div>
                   {device.manufacturer && (
                     <div className="flex justify-between text-sm">
