@@ -60,9 +60,11 @@ const App = () => {
             {/* Connection loss overlay */}
             {connectionLoss && <div className="connection-loss" />}
             
-            {/* Main content with floating effect */}
-            <div className="content-container">
-              <Navbar />
+            {/* Navigation */}
+            <Navbar />
+            
+            {/* Main content with floating effect and top padding for fixed navbar */}
+            <div className="content-container pt-16">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/products" element={<Products />} />

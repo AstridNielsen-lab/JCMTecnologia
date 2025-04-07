@@ -8,7 +8,7 @@ const Navbar = () => {
   const menuItems = ['Home', 'Neural', 'Products', 'About'];
 
   return (
-    <nav className="bg-surface-dark/80 backdrop-blur-md border-b border-primary/30">
+    <nav className="fixed top-0 left-0 right-0 bg-surface-dark/80 backdrop-blur-md border-b border-primary/30 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2 group">
@@ -46,7 +46,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden fixed right-0 top-16 w-64 h-screen bg-surface-dark/95 border-l border-primary/30 transform transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed right-0 top-16 w-64 h-screen bg-surface-dark/95 border-l border-primary/30 transform transition-transform duration-300 ease-in-out z-50 ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

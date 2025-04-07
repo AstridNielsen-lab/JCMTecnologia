@@ -14,6 +14,7 @@ import {
   PieChart,
   Radar
 } from 'lucide-react';
+import UltrasonicMapping from '../components/UltrasonicMapping';
 
 const Home = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -188,6 +189,9 @@ const Home = () => {
 
           {/* Center Column */}
           <div className="col-span-12 lg:col-span-6 space-y-4">
+            {/* Ultrasonic Mapping */}
+            <UltrasonicMapping />
+
             {/* Main Display */}
             <div className="hud-border p-4 min-h-[400px] relative scanner">
               <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
