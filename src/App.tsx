@@ -7,7 +7,6 @@ import Products from './pages/Products';
 import About from './pages/About';
 import Neural from './pages/Neural';
 import SplashScreen from './components/SplashScreen';
-import AmbientSounds from './components/AmbientSounds';
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -49,9 +48,6 @@ const App = () => {
       ) : (
         <Router>
           <div className="min-h-screen bg-black text-white cyber-grid film-grain">
-            {/* Ambient computer sounds */}
-            <AmbientSounds />
-            
             {/* Vintage film effects */}
             <div className="vignette" />
             <div className="film-scratches" />
