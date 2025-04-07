@@ -7,40 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#ff0000',
-          dark: '#990000',
-        },
-        surface: {
-          DEFAULT: '#1a0000',
-          dark: '#0a0000',
+        terminal: {
+          green: '#00ff00',
+          dark: '#003300',
+          black: '#000000',
         }
       },
       animation: {
-        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'glitch': 'glitch 3s infinite',
-        'connection-loss': 'connectionLoss 4s infinite',
-        'color-flash': 'colorFlash 5s infinite',
-        'scan-lines': 'scanlines 1s linear infinite',
-        'static-noise': 'staticNoise 0.5s steps(2) infinite',
+        'terminal-blink': 'blink 1s step-end infinite',
+        'terminal-glow': 'terminalGlow 2s ease-in-out infinite',
+        'terminal-scan': 'scanline 10s linear infinite',
+        'terminal-float': 'float 6s ease-in-out infinite',
+        'terminal-glitch': 'glitch 2s infinite linear alternate-reverse',
       },
-      keyframes: {
-        'pulse-glow': {
-          '0%, 100%': {
-            opacity: '1',
-            filter: 'brightness(1)',
-          },
-          '50%': {
-            opacity: '.8',
-            filter: 'brightness(1.2) hue-rotate(45deg)',
-          },
-        },
-      },
-      backgroundImage: {
-        'cyber-grid': 'linear-gradient(90deg, rgba(255, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(0deg, rgba(255, 0, 0, 0.1) 1px, transparent 1px)',
-      },
-      backgroundSize: {
-        'cyber-grid': '20px 20px',
+      fontFamily: {
+        terminal: ['Courier New', 'monospace'],
       },
     },
   },
