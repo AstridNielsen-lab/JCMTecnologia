@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import UltrasonicMapping from '../components/UltrasonicMapping';
 import NetworkScanner from '../components/NetworkScanner';
+import Toolbox from '../components/Toolbox';
 
 const Home = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -173,13 +174,16 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Network Scanner */}
+            {/* Toolbox */}
+            <div className="hud-border scanner">
+              <Toolbox />
+            </div>
+
             <NetworkScanner />
           </div>
 
           {/* Center Column */}
           <div className="col-span-12 lg:col-span-6 space-y-4">
-            {/* Ultrasonic Mapping */}
             <UltrasonicMapping />
 
             {/* Main Display */}
