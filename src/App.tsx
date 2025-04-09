@@ -7,12 +7,16 @@ import Products from './pages/Products';
 import About from './pages/About';
 import Neural from './pages/Neural';
 import SplashScreen from './components/SplashScreen';
-import TechChat from './components/TechChat';
 import ConsentBanner from './components/ConsentBanner';
 import PermissionsBanner from './components/PermissionsBanner';
+import MultiChatAPI from './components/MultiChatAPI';
+import TerminalPanel from './components/TerminalPanel';
+import { Terminal } from 'lucide-react';
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [showMultiChat, setShowMultiChat] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [connectionLoss, setConnectionLoss] = useState(false);
 
   useEffect(() => {
@@ -77,8 +81,27 @@ const App = () => {
               <Footer />
             </div>
 
-            {/* Tech Improvement Chat */}
-            <TechChat />
+            {/* Multi Chat API Component - Now with toggle button */}
+            {showMultiChat && <MultiChatAPI onClose={() => setShowMultiChat(false)} />}
+            
+            {/* Terminal Panel */}
+            <TerminalPanel isOpen={showTerminal} onClose={() => setShowTerminal(false)} />
+
+            {/* Floating Buttons */}
+            <div className="fixed bottom-4 right-4 flex space-x-2 z-50">
+              <button
+                onClick={() => setShowTerminal(!showTerminal)}
+                className="bg-primary text-surface-dark p-3 rounded-full hover:bg-primary-dark transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                <Terminal className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => setShowMultiChat(!showMultiChat)}
+                className="bg-primary text-surface-dark p-3 rounded-full hover:bg-primary-dark transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                {showMultiChat ? "Fechar Chat" : "Abrir Chat"}
+              </button>
+            </div>
           </div>
         </Router>
       )}

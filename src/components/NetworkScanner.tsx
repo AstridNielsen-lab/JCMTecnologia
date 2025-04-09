@@ -13,7 +13,6 @@ import {
   WifiOff,
   Activity
 } from 'lucide-react';
-import NetworkSpeed from 'network-speed';
 
 interface NetworkDevice {
   id: string;
@@ -71,42 +70,6 @@ const NetworkScanner = () => {
     } catch (error) {
       console.error('Error getting local IP:', error);
       return '127.0.0.1';
-    }
-  };
-
-  // Network speed test using the Network Information API and custom measurements
-  const measureNetworkSpeed = async () => {
-    try {
-      const testNetworkSpeed = new NetworkSpeed('https://www.speedtest.net/');
-      
-      const downloadSpeed = await testNetworkSpeed.checkDownloadSpeed();
-      const uploadSpeed = await testNetworkSpeed.checkUploadSpeed();
-      
-      // Get connection information
-      const connection = (navigator as any).connection;
-      const effectiveType = connection?.effectiveType || 'unknown';
-      const downlink = connection?.downlink || 0;
-      const rtt = connection?.rtt || 0;
-
-      // Simulate packet loss based on connection quality
-      const packetLoss = effectiveType === '4g' ? 0 : 
-                        effectiveType === '3g' ? 5 :
-                        effectiveType === '2g' ? 15 : 0;
-      
-      // Simulate WiFi signal strength based on connection quality
-      const signalStrength = effectiveType === '4g' ? 90 : 
-                            effectiveType === '3g' ? 60 :
-                            effectiveType === '2g' ? 30 : 75;
-
-      setNetworkStats({
-        downloadSpeed: downloadSpeed.mbps,
-        uploadSpeed: uploadSpeed.mbps,
-        latency: rtt,
-        packetLoss,
-        signalStrength
-      });
-    } catch (error) {
-      console.error('Error measuring network speed:', error);
     }
   };
 
@@ -180,15 +143,7 @@ const NetworkScanner = () => {
   useEffect(() => {
     // Initial setup
     getLocalIpAddress().then(ip => setLocalIp(ip));
-    measureNetworkSpeed();
     monitorConnections();
-
-    // Set up periodic measurements
-    const speedInterval = setInterval(measureNetworkSpeed, 5000);
-    
-    return () => {
-      clearInterval(speedInterval);
-    };
   }, [monitorConnections]);
 
   const getDeviceIcon = (type: string) => {
@@ -255,34 +210,6 @@ const NetworkScanner = () => {
               style={{ width: `${networkStats.signalStrength}%` }}
             />
           </div>
-        </div>
-
-        <div className="bg-surface/50 border border-primary/30 rounded-lg p-4">
-          <p className="text-primary/70 text-sm">Download Speed</p>
-          <p className="text-primary text-lg font-medium">
-            {networkStats.downloadSpeed.toFixed(2)} Mbps
-          </p>
-        </div>
-
-        <div className="bg-surface/50 border border-primary/30 rounded-lg p-4">
-          <p className="text-primary/70 text-sm">Upload Speed</p>
-          <p className="text-primary text-lg font-medium">
-            {networkStats.uploadSpeed.toFixed(2)} Mbps
-          </p>
-        </div>
-
-        <div className="bg-surface/50 border border-primary/30 rounded-lg p-4">
-          <p className="text-primary/70 text-sm">Latency</p>
-          <p className="text-primary text-lg font-medium">
-            {networkStats.latency} ms
-          </p>
-        </div>
-
-        <div className="bg-surface/50 border border-primary/30 rounded-lg p-4">
-          <p className="text-primary/70 text-sm">Packet Loss</p>
-          <p className="text-primary text-lg font-medium">
-            {networkStats.packetLoss.toFixed(1)}%
-          </p>
         </div>
 
         <div className="bg-surface/50 border border-primary/30 rounded-lg p-4">

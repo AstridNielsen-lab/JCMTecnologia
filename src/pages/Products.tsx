@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Octokit } from 'octokit';
-import AIChat from '../components/AIChat';
 import { Search, Filter, Globe, Github, MessageSquare, Cpu, GitFork, Star, ExternalLink } from 'lucide-react';
 
 interface Repository {
@@ -17,7 +16,6 @@ interface Repository {
 const Products = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
   const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([]);
   const [allTechnologies, setAllTechnologies] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -191,7 +189,7 @@ const Products = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <a
                     href={repo.html_url}
                     target="_blank"
@@ -208,25 +206,12 @@ const Products = () => {
                   >
                     <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
                   </a>
-                  <button
-                    onClick={() => setSelectedRepo(repo)}
-                    className="flex items-center justify-center bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow"
-                  >
-                    <MessageSquare className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {selectedRepo && (
-        <AIChat 
-          repository={selectedRepo}
-          onClose={() => setSelectedRepo(null)}
-        />
-      )}
     </div>
   );
 };
