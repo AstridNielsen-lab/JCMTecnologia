@@ -7,11 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        terminal: {
-          green: '#00ff00',
-          dark: '#003300',
-          black: '#000000',
-        }
+        primary: '#00E5FF',
+        'primary-dark': '#00B8D4',
+        surface: '#001529',
+        'surface-dark': '#000C17',
+        accent: '#05D5FF'
       },
       animation: {
         'terminal-blink': 'blink 1s step-end infinite',

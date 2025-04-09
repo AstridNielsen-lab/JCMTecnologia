@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Radar, Waves, Box, Maximize2, Send, ArrowDownLeft } from 'lucide-react';
 
-const API_KEY = "AIzaSyCqsdGmlJfpYAzpu8uph1VAjI51XbB5iV0";
+const API_KEY = "SUA API AQUI";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 interface MappingData {

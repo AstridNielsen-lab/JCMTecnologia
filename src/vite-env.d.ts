@@ -45,3 +45,5 @@ interface SpeechRecognitionAlternative {
   transcript: string;
   confidence: number;
 }
+
+declare module '@google/generative-ai';

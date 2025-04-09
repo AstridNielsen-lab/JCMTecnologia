@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AudioWaveform, Menu, X } from 'lucide-react';
+import { AudioWaveform, Menu, X, Home, Package, Info } from 'lucide-react';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const menuItems = ['Home', 'Neural', 'Products', 'About'];
+  const menuItems = [
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Products', path: '/products', icon: Package },
+    { name: 'About', path: '/about', icon: Info }
+  ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-surface-dark/80 backdrop-blur-md border-b border-primary/30 z-50">
@@ -20,11 +24,12 @@ const Navbar = () => {
           <div className="hidden md:flex space-x-8">
             {menuItems.map((item) => (
               <Link
-                key={item}
-                to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
-                className="text-white hover:text-primary transition-all duration-300 hover:scale-110 relative group"
+                key={item.name}
+                to={item.path}
+                className="text-white hover:text-primary transition-all duration-300 hover:scale-110 relative group flex items-center gap-2"
               >
-                {item}
+                <item.icon className="h-4 w-4" />
+                {item.name}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
               </Link>
             ))}
@@ -53,12 +58,13 @@ const Navbar = () => {
         <div className="flex flex-col space-y-4 p-6">
           {menuItems.map((item) => (
             <Link
-              key={item}
-              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+              key={item.name}
+              to={item.path}
               onClick={() => setIsMenuOpen(false)}
               className="text-white hover:text-primary transition-all duration-300 hover:translate-x-2 flex items-center space-x-2"
             >
-              <span>{item}</span>
+              <item.icon className="h-4 w-4" />
+              <span>{item.name}</span>
             </Link>
           ))}
         </div>
