@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Octokit } from 'octokit';
-import { Search, Filter, Brain, Star, Code, ExternalLink, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud, MessageSquare } from 'lucide-react';
+import { Search, Filter, Brain, Star, Code, ExternalLink, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import AIChat from '../components/AIChat';
 
 interface Repository {
@@ -15,6 +15,10 @@ interface Repository {
   fork: boolean;
 }
 
+interface ExpandedNames {
+  [key: number]: boolean;
+}
+
 const Products = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +27,20 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [expandedNames, setExpandedNames] = useState<ExpandedNames>({});
+  const [activeButton, setActiveButton] = useState<string | null>(null);
+
+  const toggleNameExpansion = (repoId: number) => {
+    setExpandedNames(prev => ({
+      ...prev,
+      [repoId]: !prev[repoId]
+    }));
+  };
+
+  const truncateName = (name: string, isExpanded: boolean) => {
+    if (name.length <= 20 || isExpanded) return name;
+    return name.substring(0, 20) + '...';
+  };
 
   const getLanguageColor = (language: string) => {
     switch (language?.toLowerCase()) {
@@ -125,6 +143,12 @@ const Products = () => {
     audio.play();
   };
 
+  // Handle button press animation
+  const handleButtonPress = (buttonId: string) => {
+    setActiveButton(buttonId);
+    setTimeout(() => setActiveButton(null), 200);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-dark flex items-center justify-center">
@@ -178,6 +202,7 @@ const Products = () => {
                 key={tech}
                 onClick={() => {
                   playClickSound();
+                  handleButtonPress(`tech-${tech}`);
                   setSelectedTechnologies(prev =>
                     prev.includes(tech)
                       ? prev.filter(t => t !== tech)
@@ -185,10 +210,12 @@ const Products = () => {
                   );
                 }}
                 onMouseEnter={playHoverSound}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform active:scale-95 ${
+                  activeButton === `tech-${tech}` ? 'scale-95' : ''
+                } ${
                   selectedTechnologies.includes(tech)
-                    ? 'bg-primary text-surface-dark box-glow'
-                    : 'bg-surface/50 text-primary border border-primary/30 hover:border-primary'
+                    ? 'bg-primary text-surface-dark box-glow shadow-lg'
+                    : 'bg-surface/50 text-primary border border-primary/30 hover:border-primary hover:shadow-lg'
                 }`}
               >
                 {tech}
@@ -202,6 +229,9 @@ const Products = () => {
           {filteredRepositories.map((repo) => {
             const LanguageIcon = getLanguageIcon(repo.language);
             const languageColor = getLanguageColor(repo.language);
+            const isExpanded = expandedNames[repo.id];
+            const needsExpansion = repo.name.length > 20;
+
             return (
               <div
                 key={repo.id}
@@ -210,10 +240,27 @@ const Products = () => {
                 <div className="p-6 flex-1 flex flex-col">
                   {/* Project Header */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={repo.name}>
-                      {repo.name}
-                    </h3>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex-1 flex items-start">
+                      <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={truncateName(repo.name, isExpanded)}>
+                        {truncateName(repo.name, isExpanded)}
+                      </h3>
+                      {needsExpansion && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            playClickSound();
+                            handleButtonPress(`expand-${repo.id}`);
+                            toggleNameExpansion(repo.id);
+                          }}
+                          className={`ml-2 text-primary hover:text-primary-dark transition-colors transform active:scale-95 ${
+                            activeButton === `expand-${repo.id}` ? 'scale-95' : ''
+                          }`}
+                        >
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3 ml-2">
                       <span className="flex items-center text-yellow-400">
                         <Star className="h-4 w-4 mr-1" />
                         {repo.stargazers_count}
@@ -253,8 +300,13 @@ const Products = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       onMouseEnter={playHoverSound}
-                      onClick={playClickSound}
-                      className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow"
+                      onClick={(e) => {
+                        playClickSound();
+                        handleButtonPress(`visit-${repo.id}`);
+                      }}
+                      className={`flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow transform active:scale-95 ${
+                        activeButton === `visit-${repo.id}` ? 'scale-95' : ''
+                      }`}
                     >
                       <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span>Visitar</span>
@@ -262,11 +314,14 @@ const Products = () => {
                     <button
                       onClick={() => {
                         playClickSound();
+                        handleButtonPress(`chat-${repo.id}`);
                         setSelectedRepo(repo);
                         setShowChat(true);
                       }}
                       onMouseEnter={playHoverSound}
-                      className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow"
+                      className={`flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow transform active:scale-95 ${
+                        activeButton === `chat-${repo.id}` ? 'scale-95' : ''
+                      }`}
                     >
                       <MessageSquare className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span>Orçamento</span>

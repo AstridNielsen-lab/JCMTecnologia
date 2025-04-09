@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, Code, Database, Globe, Server, Shield, Terminal, Cpu } from 'lucide-react';
+import { Brain, Code, Database, Globe, Server, Shield, Terminal, Cpu, Linkedin } from 'lucide-react';
 
 const About = () => {
   return (
@@ -22,7 +22,18 @@ const About = () => {
         <div className="hud-border rounded-lg p-8 scanner mb-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <h2 className="text-2xl font-bold text-primary mb-4">Julio Campos Machado</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-primary">Julio Campos Machado</h2>
+                <a 
+                  href="https://www.linkedin.com/in/juliocamposmachado/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-primary hover:text-primary-dark transition-colors p-2 border border-primary/30 rounded-lg hover:border-primary"
+                >
+                  <Linkedin className="h-5 w-5" />
+                  <span className="hidden sm:inline">LinkedIn</span>
+                </a>
+              </div>
               <p className="text-primary/80 mb-6">
                 Desenvolvedor Full Stack Sênior com mais de 10 anos de experiência em desenvolvimento de software, 
                 especializado em soluções tecnológicas inovadoras e arquitetura de sistemas complexos.
