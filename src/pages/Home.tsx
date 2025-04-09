@@ -17,6 +17,7 @@ import {
 import UltrasonicMapping from '../components/UltrasonicMapping';
 import NetworkScanner from '../components/NetworkScanner';
 import Toolbox from '../components/Toolbox';
+import MultiAIChat from '../components/MultiAIChat';
 
 const Home = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -184,6 +185,7 @@ const Home = () => {
 
           {/* Center Column */}
           <div className="col-span-12 lg:col-span-6 space-y-4">
+            <MultiAIChat />
             <UltrasonicMapping />
 
             {/* Main Display */}
