@@ -37,9 +37,34 @@ const Products = () => {
     }));
   };
 
+  const formatRepoName = (name: string) => {
+    return name.replace(/-/g, ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const getDefaultDescription = (repo: Repository) => {
+    const descriptions: { [key: string]: string } = {
+      "jcm tecnologia": "Hub de inovação especializado em desenvolvimento de software, IA e soluções tecnológicas. Interface moderna com recursos avançados de interação neural e processamento de dados.",
+      "network scanner": "Scanner de rede avançado com análise em tempo real de dispositivos conectados, monitoramento de tráfego e visualização de dados em interface interativa.",
+      "ultrasonic mapping": "Sistema de mapeamento ultrassônico para análise e visualização de ambientes em tempo real, utilizando tecnologia de ondas sonoras para criar representações precisas.",
+      "neural interface": "Interface neural inteligente com processamento de linguagem natural, análise comportamental e sistema de resposta adaptativo baseado em IA.",
+      "multi chat api": "Sistema de chat multicanal com suporte a múltiplas APIs de IA, permitindo interações simultâneas e processamento de linguagem natural avançado.",
+      "terminal interface": "Interface de terminal interativa com suporte a comandos personalizados, emulação de ambiente Linux e recursos de automação.",
+      "ai assistant": "Assistente de IA avançado com capacidades de processamento de linguagem natural, análise contextual e integração com múltiplas fontes de dados.",
+      "system monitor": "Monitor de sistema em tempo real com análise de recursos, visualização de métricas e alertas inteligentes.",
+      "audio analyzer": "Analisador de áudio em tempo real com processamento de sinais, visualização de forma de onda e análise espectral.",
+      "data manager": "Gerenciador de dados com recursos avançados de análise, visualização e processamento de informações em tempo real."
+    };
+
+    const normalizedName = repo.name.toLowerCase();
+    return descriptions[normalizedName] || repo.description || "Sistema avançado com integração de tecnologias modernas para processamento e análise de dados em tempo real.";
+  };
+
   const truncateName = (name: string, isExpanded: boolean) => {
-    if (name.length <= 20 || isExpanded) return name;
-    return name.substring(0, 20) + '...';
+    const formattedName = formatRepoName(name);
+    if (formattedName.length <= 20 || isExpanded) return formattedName;
+    return formattedName.substring(0, 20) + '...';
   };
 
   const getLanguageColor = (language: string) => {
@@ -143,7 +168,6 @@ const Products = () => {
     audio.play();
   };
 
-  // Handle button press animation
   const handleButtonPress = (buttonId: string) => {
     setActiveButton(buttonId);
     setTimeout(() => setActiveButton(null), 200);
@@ -163,13 +187,11 @@ const Products = () => {
 
   return (
     <div className="min-h-screen bg-surface-dark py-16 relative overflow-hidden">
-      {/* Background Effects */}
       <div className="absolute inset-0 hex-grid opacity-30" />
       <div className="absolute inset-0 data-lines" />
       <div className="absolute inset-0 bg-grid-pattern" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Header */}
         <div className="mb-12 relative">
           <div className="absolute -left-4 -top-4 w-20 h-20 border-l-2 border-t-2 border-primary opacity-50" />
           <div className="absolute -right-4 -top-4 w-20 h-20 border-r-2 border-t-2 border-primary opacity-50" />
@@ -177,7 +199,6 @@ const Products = () => {
           <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent box-glow" />
         </div>
 
-        {/* Search and Filter Section */}
         <div className="mb-12 hud-border rounded-lg p-6 scanner">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-1">
@@ -224,7 +245,6 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredRepositories.map((repo) => {
             const LanguageIcon = getLanguageIcon(repo.language);
@@ -238,7 +258,6 @@ const Products = () => {
                 className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300 flex flex-col"
               >
                 <div className="p-6 flex-1 flex flex-col">
-                  {/* Project Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 flex items-start">
                       <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={truncateName(repo.name, isExpanded)}>
@@ -271,17 +290,14 @@ const Products = () => {
                     </div>
                   </div>
 
-                  {/* Project Icon */}
                   <div className="flex justify-center mb-4">
                     <div className="p-4 bg-surface/30 rounded-full border border-primary/30 group-hover:border-primary transition-all duration-300">
                       <Package className={`h-8 w-8 ${languageColor} group-hover:scale-110 transition-transform`} />
                     </div>
                   </div>
 
-                  {/* Project Description */}
-                  <p className="text-primary/80 mb-4 flex-1">{repo.description}</p>
+                  <p className="text-primary/80 mb-4 flex-1">{getDefaultDescription(repo)}</p>
 
-                  {/* Technologies */}
                   <div className="flex flex-wrap gap-2 mb-6">
                     {repo.topics.map((topic) => (
                       <span 
@@ -293,7 +309,6 @@ const Products = () => {
                     ))}
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-4 mt-auto">
                     <a
                       href={repo.homepage}
@@ -334,7 +349,6 @@ const Products = () => {
         </div>
       </div>
 
-      {/* AI Chat Modal */}
       {showChat && selectedRepo && (
         <AIChat
           repository={selectedRepo}
