@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Octokit } from 'octokit';
-import { Search, Filter, Brain, Star, Code, ExternalLink, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud } from 'lucide-react';
+import { Search, Filter, Brain, Star, Code, ExternalLink, GitFork, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud } from 'lucide-react';
 
 interface Repository {
   id: number;
@@ -12,9 +12,13 @@ interface Repository {
   stargazers_count: number;
   language: string;
   fork: boolean;
+  source?: {
+    full_name: string;
+    html_url: string;
+  };
 }
 
-const Products = () => {
+const Forks = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([]);
@@ -60,7 +64,7 @@ const Products = () => {
         });
 
         const repos = response.data
-          .filter(repo => !repo.fork) // Only show original repos, not forks
+          .filter(repo => repo.fork) // Only show forks
           .map(repo => ({
             id: repo.id,
             name: repo.name,
@@ -70,7 +74,8 @@ const Products = () => {
             topics: repo.topics,
             stargazers_count: repo.stargazers_count,
             language: repo.language || 'Não especificada',
-            fork: repo.fork
+            fork: repo.fork,
+            source: repo.source
           }));
 
         const technologies = new Set<string>();
@@ -122,7 +127,7 @@ const Products = () => {
       <div className="min-h-screen bg-surface-dark flex items-center justify-center">
         <div className="cyber-spinner">
           <div className="absolute inset-0 flex items-center justify-center">
-            <Brain className="w-6 h-6 text-primary animate-pulse" />
+            <GitFork className="w-6 h-6 text-primary animate-pulse" />
           </div>
         </div>
       </div>
@@ -141,7 +146,7 @@ const Products = () => {
         <div className="mb-12 relative">
           <div className="absolute -left-4 -top-4 w-20 h-20 border-l-2 border-t-2 border-primary opacity-50" />
           <div className="absolute -right-4 -top-4 w-20 h-20 border-r-2 border-t-2 border-primary opacity-50" />
-          <h1 className="text-4xl font-bold text-center text-primary text-glow mb-2">Meus Projetos</h1>
+          <h1 className="text-4xl font-bold text-center text-primary text-glow mb-2">Projetos Forkados</h1>
           <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent box-glow" />
         </div>
 
@@ -152,7 +157,7 @@ const Products = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
               <input
                 type="text"
-                placeholder="Buscar projetos..."
+                placeholder="Buscar forks..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-surface/50 border border-primary/30 rounded-lg focus:outline-none focus:border-primary text-primary placeholder-primary/50"
@@ -189,7 +194,7 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
+        {/* Forks Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredRepositories.map((repo) => {
             const LanguageIcon = getLanguageIcon(repo.language);
@@ -223,12 +228,27 @@ const Products = () => {
                   {/* Project Icon */}
                   <div className="flex justify-center mb-4">
                     <div className="p-4 bg-surface/30 rounded-full border border-primary/30 group-hover:border-primary transition-all duration-300">
-                      <Package className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+                      <GitFork className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
                     </div>
                   </div>
 
                   {/* Project Description */}
                   <p className="text-primary/80 mb-4 h-20 overflow-hidden">{repo.description}</p>
+
+                  {/* Source Repository */}
+                  {repo.source && (
+                    <div className="mb-4 text-sm">
+                      <span className="text-primary/60">Forked from: </span>
+                      <a
+                        href={repo.source.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary-dark transition-colors"
+                      >
+                        {repo.source.full_name}
+                      </a>
+                    </div>
+                  )}
 
                   {/* Technologies */}
                   <div className="flex flex-wrap gap-2 mb-6">
@@ -245,7 +265,7 @@ const Products = () => {
                   {/* Visit Link */}
                   <div className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow">
                     <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span>Visitar Projeto</span>
+                    <span>Visitar Fork</span>
                   </div>
                 </div>
               </a>
@@ -257,4 +277,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Forks;

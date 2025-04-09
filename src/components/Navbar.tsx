@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AudioWaveform, Menu, X, Home, Package, Info } from 'lucide-react';
+import { AudioWaveform, Menu, X, Home, Package, Info, GitFork } from 'lucide-react';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const menuItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Products', path: '/products', icon: Package },
+    { name: 'Projects', path: '/products', icon: Package },
+    { name: 'Forks', path: '/forks', icon: GitFork },
     { name: 'About', path: '/about', icon: Info }
   ];
 

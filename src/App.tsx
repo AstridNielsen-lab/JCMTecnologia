@@ -11,6 +11,7 @@ import TerminalPanel from './components/TerminalPanel';
 import AIAssistant from './pages/AIAssistant';
 import PlaceholderPage from './pages/placeholder';
 import Products from './pages/Products';
+import Forks from './pages/Forks';
 import About from './pages/About';
 import SplashScreen from './components/SplashScreen';
 import ConsentBanner from './components/ConsentBanner';
@@ -45,6 +46,7 @@ const App = () => {
                 <Route path="/security" element={<PlaceholderPage />} />
                 <Route path="/data-manager" element={<PlaceholderPage />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/forks" element={<Forks />} />
                 <Route path="/about" element={<About />} />
               </Routes>
               <Footer />
@@ -56,4 +58,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App
