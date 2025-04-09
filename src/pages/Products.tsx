@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Octokit } from 'octokit';
-import { Search, Filter, Brain, Star, Code, ExternalLink, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud } from 'lucide-react';
+import { Search, Filter, Brain, Star, Code, ExternalLink, Package, Cpu, Globe, Database, Lock, Settings, Terminal, Cloud, MessageSquare } from 'lucide-react';
+import AIChat from '../components/AIChat';
 
 interface Repository {
   id: number;
@@ -20,6 +21,8 @@ const Products = () => {
   const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([]);
   const [allTechnologies, setAllTechnologies] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
   const getLanguageIcon = (language: string) => {
     switch (language?.toLowerCase()) {
@@ -194,13 +197,8 @@ const Products = () => {
           {filteredRepositories.map((repo) => {
             const LanguageIcon = getLanguageIcon(repo.language);
             return (
-              <a
+              <div
                 key={repo.id}
-                href={repo.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-                onMouseEnter={playHoverSound}
-                onClick={playClickSound}
                 className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300"
               >
                 <div className="p-6">
@@ -242,17 +240,50 @@ const Products = () => {
                     ))}
                   </div>
 
-                  {/* Visit Link */}
-                  <div className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow">
-                    <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span>Visitar Projeto</span>
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <a
+                      href={repo.homepage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onMouseEnter={playHoverSound}
+                      onClick={playClickSound}
+                      className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow"
+                    >
+                      <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span>Visitar</span>
+                    </a>
+                    <button
+                      onClick={() => {
+                        playClickSound();
+                        setSelectedRepo(repo);
+                        setShowChat(true);
+                      }}
+                      onMouseEnter={playHoverSound}
+                      className="flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 hover:border-primary group hover:box-glow"
+                    >
+                      <MessageSquare className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span>Orçamento</span>
+                    </button>
                   </div>
                 </div>
-              </a>
+              </div>
             );
           })}
         </div>
       </div>
+
+      {/* AI Chat Modal */}
+      {showChat && selectedRepo && (
+        <AIChat
+          repository={selectedRepo}
+          onClose={() => {
+            setShowChat(false);
+            setSelectedRepo(null);
+          }}
+          mode="product"
+        />
+      )}
     </div>
   );
 };

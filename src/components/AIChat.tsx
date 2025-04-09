@@ -12,7 +12,7 @@ interface AIChatProps {
   mode?: 'neural' | 'product';
 }
 
-const API_KEY = "AIzaSyCqsdGmlJfpYAzpu8uph1VAjI51XbB5iV0";
+const API_KEY = "AIzaSyAxtrfdpByKg-1xK_iqvGpjPO4eIaKVis8";
 const genAI = new GoogleGenerativeAI(API_KEY);
 const MONTHLY_RATE = 1000; // $1000 USD per month
 
@@ -366,9 +366,10 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     if (!messageText.trim() || messageText === 'Ouvindo... Fale agora') return;
 
     setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
     setIsLoading(true);
 
-    const sendMessage = async () => {
+    try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       const chat = model.startChat({
         history: [
@@ -393,15 +394,6 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
       setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
       if (mode === 'neural') {
         speakMessage(responseText);
-      }
-    };
-
-    try {
-      const success = await executeWithRetry(sendMessage);
-      if (!success) {
-        addToRetryQueue(messageText, sendMessage);
-      } else {
-        setMessages(prev => [...prev, { role: 'user', content: messageText }]);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -551,7 +543,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
             />
             <button
               onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading || input === 'Ouvindo... Fale agora'}
+              disabled={!input.trim() || input === 'Ouvindo... Fale agora'}
               className="bg-cyan-500 text-black p-2 rounded-lg hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-all duration-200"
             >
               <Send className="h-4 w-4 sm:h-5 sm:w-5" />
