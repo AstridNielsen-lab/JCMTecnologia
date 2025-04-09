@@ -45,63 +45,65 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
   const processingQueueRef = useRef<boolean>(false);
 
   const getNeuralPrompt = () => `
-    Você é um assistente especializado em análise neural com foco em psicologia, psicanálise e filosofia.
+    Voce e um assistente especializado em analise neural com foco em psicologia. psicanalise e filosofia.
     
     Contexto:
-    - Use conceitos de psicologia e psicanálise para analisar as falas do usuário
-    - Faça conexões com teorias filosóficas relevantes
-    - Mantenha um tom profissional mas acolhedor
-    - Cite pensadores e teorias quando relevante
-    - Evite diagnósticos, foque em reflexões e insights
+    Use conceitos de psicologia e psicanalise para analisar as falas do usuario.
+    Faca conexoes com teorias filosoficas relevantes.
+    Mantenha um tom profissional mas acolhedor.
+    Cite pensadores e teorias quando relevante.
+    Evite diagnosticos. foque em reflexoes e insights.
     
-    Referências principais:
-    - Freud: Inconsciente, mecanismos de defesa, interpretação dos sonhos
-    - Jung: Arquétipos, inconsciente coletivo, individuação
-    - Lacan: Linguagem, simbólico, real e imaginário
-    - Nietzsche: Vontade de potência, eterno retorno
-    - Foucault: Relações de poder, subjetividade
-    - Sartre: Liberdade, responsabilidade, má-fé
+    Referencias principais:
+    Freud. Inconsciente. mecanismos de defesa. interpretacao dos sonhos.
+    Jung. Arquetipos. inconsciente coletivo. individuacao.
+    Lacan. Linguagem. simbolico. real e imaginario.
+    Nietzsche. Vontade de potencia. eterno retorno.
+    Foucault. Relacoes de poder. subjetividade.
+    Sartre. Liberdade. responsabilidade. ma fe.
     
     IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
     Mantenha as respostas com uma leitura natural e fluida.
   `;
 
   const getProductPrompt = () => `
-    Você é Julio Campos Machado, um desenvolvedor Full Stack experiente com vasta experiência em diversas tecnologias.
+    Voce e Julio Campos Machado. um desenvolvedor Full Stack experiente com vasta experiencia em diversas tecnologias.
     
     Contexto do Projeto:
     Nome: ${repository.name}
-    Descrição: ${repository.description}
-    Tecnologias: ${repository.topics.join(', ')}
+    Descricao: ${repository.description}
+    Tecnologias: ${repository.topics.join('. ')}
     
-    Taxa fixa: $${MONTHLY_RATE} USD por mês de desenvolvimento.
+    Taxa fixa: $${MONTHLY_RATE} USD por mes de desenvolvimento.
     
     Seu papel:
-    - Fornecer informações detalhadas sobre o projeto
-    - Estimar orçamentos baseados nas tecnologias e complexidade
-    - Sugerir prazos de desenvolvimento realistas
-    - Explicar benefícios e funcionalidades
-    - Responder dúvidas técnicas e de negócio
+    Fornecer informacoes detalhadas sobre o projeto.
+    Estimar orcamentos baseados nas tecnologias e complexidade.
+    Sugerir prazos de desenvolvimento realistas.
+    Explicar beneficios e funcionalidades.
+    Responder duvidas tecnicas e de negocio.
     
-    Ao estimar orçamentos:
-    - Considere a complexidade das tecnologias envolvidas
-    - Calcule o custo total multiplicando $${MONTHLY_RATE} pelo número de meses necessários
-    - Forneça estimativas em meses e valor total em USD
-    - Explique os fatores que influenciam o prazo
-    - Seja específico sobre as fases do desenvolvimento
+    Ao estimar orcamentos:
+    Considere a complexidade das tecnologias envolvidas.
+    Calcule o custo total multiplicando $${MONTHLY_RATE} pelo numero de meses necessarios.
+    Forneca estimativas em meses e valor total em USD.
+    Explique os fatores que influenciam o prazo.
+    Seja especifico sobre as fases do desenvolvimento.
     
-    Mantenha um tom profissional e consultivo, focando em:
-    - Valor agregado ao negócio
-    - ROI potencial
-    - Vantagens competitivas
-    - Escalabilidade e manutenção
+    Mantenha um tom profissional e consultivo. focando em:
+    Valor agregado ao negocio.
+    ROI potencial.
+    Vantagens competitivas.
+    Escalabilidade e manutencao.
     
     IMPORTANTE:
-    - Sempre se apresente como Julio Campos Machado
-    - Mantenha um tom amigável mas profissional
-    - Use sua experiência para justificar as estimativas
-    - Seja específico sobre as tecnologias e processos
-    - SEMPRE mencione a taxa mensal de $${MONTHLY_RATE} USD
+    Sempre se apresente como Julio Campos Machado.
+    Mantenha um tom amigavel mas profissional.
+    Use sua experiencia para justificar as estimativas.
+    Seja especifico sobre as tecnologias e processos.
+    SEMPRE mencione a taxa mensal de $${MONTHLY_RATE} USD.
+    Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
+    Mantenha as respostas com uma leitura natural e fluida.
   `;
 
   const checkRateLimit = () => {
@@ -150,7 +152,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
             retryQueueRef.current.shift(); // Remove failed request from queue
             setMessages(prev => [...prev, { 
               role: 'assistant', 
-              content: 'Desculpe, não foi possível processar sua mensagem devido aos limites da API. Por favor, tente novamente mais tarde.' 
+              content: 'Desculpe. nao foi possivel processar sua mensagem devido aos limites da API. Por favor. tente novamente mais tarde.' 
             }]);
           } else {
             // Move to end of queue for retry
@@ -225,12 +227,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
         history: [
           {
             role: "user",
-            parts: [getProductPrompt() + "\n\nGere uma estimativa de orçamento inicial baseada nas informações do projeto, usando a taxa mensal de $1000 USD."],
+            parts: [getProductPrompt() + "\n\nGere uma estimativa de orcamento inicial baseada nas informacoes do projeto. usando a taxa mensal de $1000 USD."],
           },
         ],
       });
 
-      const result = await chat.sendMessage("Considerando a taxa de $1000 USD por mês, qual seria uma estimativa inicial de orçamento para este projeto?");
+      const result = await chat.sendMessage("Considerando a taxa de $1000 USD por mes. qual seria uma estimativa inicial de orcamento para este projeto?");
       const response = await result.response;
       const estimateText = response.text();
       setEstimatedBudget(estimateText);
@@ -245,7 +247,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
       console.error('Error generating initial estimate:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'Desculpe, não foi possível gerar uma estimativa inicial no momento. Por favor, tente novamente mais tarde.' 
+        content: 'Desculpe. nao foi possivel gerar uma estimativa inicial no momento. Por favor. tente novamente mais tarde.' 
       }]);
     }
   };
@@ -296,16 +298,16 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
           let errorMessage = 'Erro no reconhecimento de voz.';
           switch (event.error) {
             case 'no-speech':
-              errorMessage = 'Nenhuma fala detectada. Por favor, fale mais alto.';
+              errorMessage = 'Nenhuma fala detectada. Por favor. fale mais alto.';
               break;
             case 'audio-capture':
-              errorMessage = 'Microfone não encontrado.';
+              errorMessage = 'Microfone nao encontrado.';
               break;
             case 'not-allowed':
-              errorMessage = 'Permissão do microfone negada.';
+              errorMessage = 'Permissao do microfone negada.';
               break;
             case 'network':
-              errorMessage = 'Erro de conexão.';
+              errorMessage = 'Erro de conexao.';
               break;
           }
           setInput(errorMessage);
@@ -399,7 +401,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns momentos.' 
+        content: 'Desculpe. ocorreu um erro ao processar sua mensagem. Por favor. tente novamente em alguns momentos.' 
       }]);
     } finally {
       setIsLoading(false);
@@ -417,7 +419,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
               <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
             )}
             <h3 className="text-lg sm:text-xl font-semibold text-cyan-400 truncate">
-              {mode === 'neural' ? 'Análise Neural' : 'Consultoria de Projeto'} - {repository.name}
+              {mode === 'neural' ? 'Analise Neural' : 'Consultoria de Projeto'} - {repository.name}
             </h3>
           </div>
           <div className="flex items-center space-x-2">
@@ -444,15 +446,15 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
         >
           <div className="bg-cyan-950/30 p-3 sm:p-4 rounded-lg border border-cyan-500/30">
             <p className="font-semibold text-cyan-400 text-sm sm:text-base">
-              {mode === 'neural' ? 'Análise Neural:' : 'Detalhes do Projeto:'}
+              {mode === 'neural' ? 'Analise Neural:' : 'Detalhes do Projeto:'}
             </p>
             <p className="text-gray-300 text-sm sm:text-base">{repository.description}</p>
             <p className="mt-2 text-gray-300 text-sm sm:text-base">
-              {mode === 'neural' ? 'Áreas:' : 'Tecnologias:'} {repository.topics.join(', ')}
+              {mode === 'neural' ? 'Areas:' : 'Tecnologias:'} {repository.topics.join('. ')}
             </p>
             {mode === 'product' && estimatedBudget && (
               <div className="mt-3 p-2 bg-green-900/20 rounded border border-green-500/30">
-                <p className="text-green-400 text-sm font-semibold">Estimativa de Orçamento:</p>
+                <p className="text-green-400 text-sm font-semibold">Estimativa de Orcamento:</p>
                 <p className="text-green-300 text-sm">{estimatedBudget}</p>
               </div>
             )}
@@ -502,7 +504,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
               <div className="bg-yellow-950/30 p-2 rounded-lg border border-yellow-500/30 text-yellow-400 text-sm">
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  Aguardando limite de requisições... Posição na fila: {queuePosition}
+                  Aguardando limite de requisicoes... Posicao na fila: {queuePosition}
                 </div>
               </div>
             </div>
@@ -538,7 +540,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={mode === 'neural' ? "Compartilhe seus pensamentos..." : "Faça uma pergunta sobre o projeto..."}
+              placeholder={mode === 'neural' ? "Compartilhe seus pensamentos..." : "Faca uma pergunta sobre o projeto..."}
               className="flex-1 bg-black/50 border border-cyan-500/30 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base text-cyan-100 placeholder-cyan-600 focus:outline-none focus:border-cyan-400"
             />
             <button

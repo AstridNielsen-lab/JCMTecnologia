@@ -24,28 +24,33 @@ const Products = () => {
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
   const [showChat, setShowChat] = useState(false);
 
+  const getLanguageColor = (language: string) => {
+    switch (language?.toLowerCase()) {
+      case 'javascript': return 'text-yellow-400';
+      case 'typescript': return 'text-blue-400';
+      case 'python': return 'text-green-400';
+      case 'java': return 'text-orange-400';
+      case 'c++': return 'text-pink-400';
+      case 'php': return 'text-purple-400';
+      case 'ruby': return 'text-red-400';
+      case 'sql': return 'text-cyan-400';
+      case 'go': return 'text-teal-400';
+      default: return 'text-gray-400';
+    }
+  };
+
   const getLanguageIcon = (language: string) => {
     switch (language?.toLowerCase()) {
-      case 'javascript':
-        return Terminal;
-      case 'typescript':
-        return Code;
-      case 'python':
-        return Brain;
-      case 'java':
-        return Cpu;
-      case 'c++':
-        return Settings;
-      case 'php':
-        return Globe;
-      case 'ruby':
-        return Package;
-      case 'sql':
-        return Database;
-      case 'go':
-        return Cloud;
-      default:
-        return Code;
+      case 'javascript': return Terminal;
+      case 'typescript': return Code;
+      case 'python': return Brain;
+      case 'java': return Cpu;
+      case 'c++': return Settings;
+      case 'php': return Globe;
+      case 'ruby': return Package;
+      case 'sql': return Database;
+      case 'go': return Cloud;
+      default: return Code;
     }
   };
 
@@ -63,7 +68,7 @@ const Products = () => {
         });
 
         const repos = response.data
-          .filter(repo => !repo.fork) // Only show original repos, not forks
+          .filter(repo => !repo.fork)
           .map(repo => ({
             id: repo.id,
             name: repo.name,
@@ -196,23 +201,24 @@ const Products = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredRepositories.map((repo) => {
             const LanguageIcon = getLanguageIcon(repo.language);
+            const languageColor = getLanguageColor(repo.language);
             return (
               <div
                 key={repo.id}
-                className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300"
+                className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300 flex flex-col"
               >
-                <div className="p-6">
+                <div className="p-6 flex-1 flex flex-col">
                   {/* Project Header */}
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={repo.name}>
                       {repo.name}
                     </h3>
                     <div className="flex items-center space-x-3">
-                      <span className="flex items-center text-accent">
+                      <span className="flex items-center text-yellow-400">
                         <Star className="h-4 w-4 mr-1" />
                         {repo.stargazers_count}
                       </span>
-                      <span className="flex items-center text-primary">
+                      <span className={`flex items-center ${languageColor}`}>
                         <LanguageIcon className="h-4 w-4" />
                       </span>
                     </div>
@@ -221,12 +227,12 @@ const Products = () => {
                   {/* Project Icon */}
                   <div className="flex justify-center mb-4">
                     <div className="p-4 bg-surface/30 rounded-full border border-primary/30 group-hover:border-primary transition-all duration-300">
-                      <Package className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+                      <Package className={`h-8 w-8 ${languageColor} group-hover:scale-110 transition-transform`} />
                     </div>
                   </div>
 
                   {/* Project Description */}
-                  <p className="text-primary/80 mb-4 h-20 overflow-hidden">{repo.description}</p>
+                  <p className="text-primary/80 mb-4 flex-1">{repo.description}</p>
 
                   {/* Technologies */}
                   <div className="flex flex-wrap gap-2 mb-6">
@@ -241,7 +247,7 @@ const Products = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mt-auto">
                     <a
                       href={repo.homepage}
                       target="_blank"
