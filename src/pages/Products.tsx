@@ -43,6 +43,12 @@ const Products = () => {
     ).join(' ');
   };
 
+  const truncateName = (name: string) => {
+    const formattedName = formatRepoName(name);
+    if (formattedName.length <= 20 || expandedNames[name]) return formattedName;
+    return formattedName.substring(0, 20) + '...';
+  };
+
   const getDefaultDescription = (repo: Repository) => {
     const descriptions: { [key: string]: string } = {
       "jcm tecnologia": "Hub de inovação especializado em desenvolvimento de software, IA e soluções tecnológicas. Interface moderna com recursos avançados de interação neural e processamento de dados.",
@@ -59,12 +65,6 @@ const Products = () => {
 
     const normalizedName = repo.name.toLowerCase();
     return descriptions[normalizedName] || repo.description || "Sistema avançado com integração de tecnologias modernas para processamento e análise de dados em tempo real.";
-  };
-
-  const truncateName = (name: string, isExpanded: boolean) => {
-    const formattedName = formatRepoName(name);
-    if (formattedName.length <= 20 || isExpanded) return formattedName;
-    return formattedName.substring(0, 20) + '...';
   };
 
   const getLanguageColor = (language: string) => {
@@ -124,10 +124,16 @@ const Products = () => {
             fork: repo.fork
           }));
 
+        // Collect all unique technologies from languages and topics
         const technologies = new Set<string>();
         repos.forEach(repo => {
           if (repo.language) technologies.add(repo.language);
-          repo.topics.forEach(topic => technologies.add(topic));
+          repo.topics.forEach(topic => {
+            // Only add technology-related topics
+            if (isTechnologyTopic(topic)) {
+              technologies.add(formatTechnologyName(topic));
+            }
+          });
         });
 
         setAllTechnologies(Array.from(technologies).sort());
@@ -142,12 +148,53 @@ const Products = () => {
     fetchRepositories();
   }, []);
 
+  // Helper function to identify technology-related topics
+  const isTechnologyTopic = (topic: string): boolean => {
+    const techKeywords = [
+      'react', 'vue', 'angular', 'node', 'javascript', 'typescript',
+      'python', 'java', 'cpp', 'ruby', 'php', 'go', 'rust',
+      'mongodb', 'postgresql', 'mysql', 'redis', 'graphql',
+      'docker', 'kubernetes', 'aws', 'azure', 'firebase',
+      'machine-learning', 'ai', 'tensorflow', 'pytorch',
+      'web', 'api', 'rest', 'graphql', 'websocket',
+      'frontend', 'backend', 'fullstack', 'mobile',
+      'android', 'ios', 'react-native', 'flutter'
+    ];
+    return techKeywords.includes(topic.toLowerCase());
+  };
+
+  // Helper function to format technology names
+  const formatTechnologyName = (tech: string): string => {
+    const specialCases: { [key: string]: string } = {
+      'cpp': 'C++',
+      'nodejs': 'Node.js',
+      'nextjs': 'Next.js',
+      'reactjs': 'React',
+      'vuejs': 'Vue',
+      'postgresql': 'PostgreSQL',
+      'mongodb': 'MongoDB',
+      'graphql': 'GraphQL',
+      'typescript': 'TypeScript',
+      'javascript': 'JavaScript'
+    };
+
+    if (specialCases[tech.toLowerCase()]) {
+      return specialCases[tech.toLowerCase()];
+    }
+
+    return tech
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const filteredRepositories = repositories.filter(repo => {
     const matchesTech = selectedTechnologies.length === 0 || 
-      selectedTechnologies.some(tech => 
-        repo.topics.includes(tech.toLowerCase()) || 
-        repo.language === tech
-      );
+      selectedTechnologies.some(tech => {
+        const normalizedTech = tech.toLowerCase();
+        return repo.language?.toLowerCase() === normalizedTech ||
+          repo.topics.some(topic => topic.toLowerCase() === normalizedTech);
+      });
 
     const matchesSearch = searchTerm === '' ||
       repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -213,7 +260,7 @@ const Products = () => {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="text-primary h-5 w-5" />
-              <span className="text-primary font-medium">Filtrar por:</span>
+              <span className="text-primary font-medium">Tecnologias:</span>
             </div>
           </div>
 
@@ -260,8 +307,8 @@ const Products = () => {
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 flex items-start">
-                      <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={truncateName(repo.name, isExpanded)}>
-                        {truncateName(repo.name, isExpanded)}
+                      <h3 className="text-xl font-bold text-primary text-glow glitch" data-text={truncateName(repo.name)}>
+                        {truncateName(repo.name)}
                       </h3>
                       {needsExpansion && (
                         <button
@@ -304,7 +351,7 @@ const Products = () => {
                         key={topic}
                         className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-sm border border-primary/30"
                       >
-                        {topic}
+                        {formatTechnologyName(topic)}
                       </span>
                     ))}
                   </div>
