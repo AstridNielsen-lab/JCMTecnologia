@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Wifi, 
   Smartphone, 
@@ -11,8 +11,19 @@ import {
   AlertCircle,
   Wifi as WifiIcon,
   WifiOff,
-  Activity
+  Activity,
+  Power,
+  MessageSquare,
+  X,
+  Send,
+  Lock,
+  Unlock,
+  RefreshCw
 } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const API_KEY = "AIzaSyCqsdGmlJfpYAzpu8uph1VAjI51XbB5iV0";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 interface NetworkDevice {
   id: string;
@@ -24,6 +35,8 @@ interface NetworkDevice {
   signalStrength?: number;
   manufacturer?: string;
   responseTime?: number;
+  isLocked?: boolean;
+  isControlEnabled?: boolean;
 }
 
 interface NetworkStats {
@@ -32,6 +45,12 @@ interface NetworkStats {
   latency: number;
   packetLoss: number;
   signalStrength: number;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
 const NetworkScanner = () => {
@@ -47,8 +66,21 @@ const NetworkScanner = () => {
   const [localIp, setLocalIp] = useState<string>('');
   const [scanProgress, setScanProgress] = useState(0);
   const [activeConnections, setActiveConnections] = useState(0);
+  const [selectedDevice, setSelectedDevice] = useState<NetworkDevice | null>(null);
+  const [showDeviceControl, setShowDeviceControl] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isProcessingCommand, setIsProcessingCommand] = useState(false);
 
-  // Get local IP address using WebRTC
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const getLocalIpAddress = async () => {
     try {
       const peerConnection = new RTCPeerConnection({ iceServers: [] });
@@ -69,52 +101,78 @@ const NetworkScanner = () => {
       });
     } catch (error) {
       console.error('Error getting local IP:', error);
-      return '127.0.0.1';
+      return '192.168.1.100';
     }
   };
 
-  // Simulate network scan using sample data
+  const generateMockDevices = (baseIp: string): NetworkDevice[] => {
+    const deviceTypes: NetworkDevice['type'][] = ['smartphone', 'laptop', 'desktop', 'printer', 'router', 'server'];
+    const manufacturers = ['Apple', 'Samsung', 'Dell', 'HP', 'Cisco', 'Lenovo'];
+    
+    return Array.from({ length: 8 }, (_, i) => ({
+      id: `device-${i + 1}`,
+      name: `Device-${i + 1}`,
+      type: deviceTypes[Math.floor(Math.random() * deviceTypes.length)],
+      ipAddress: baseIp.replace(/\d+$/, `${10 + i}`),
+      lastSeen: new Date(),
+      status: Math.random() > 0.2 ? 'online' : 'offline',
+      signalStrength: Math.floor(Math.random() * 60 + 40),
+      manufacturer: manufacturers[Math.floor(Math.random() * manufacturers.length)],
+      responseTime: Math.floor(Math.random() * 100),
+      isLocked: Math.random() > 0.7,
+      isControlEnabled: true
+    }));
+  };
+
+  const simulateNetworkStats = () => {
+    setNetworkStats({
+      downloadSpeed: Math.random() * 100 + 50,
+      uploadSpeed: Math.random() * 50 + 25,
+      latency: Math.random() * 50 + 10,
+      packetLoss: Math.random() * 2,
+      signalStrength: Math.random() * 40 + 60
+    });
+  };
+
   const scanNetwork = async () => {
     setIsScanning(true);
     setScanProgress(0);
+    setDevices([]);
 
     try {
-      // Get local network information
       const localIp = await getLocalIpAddress();
       setLocalIp(localIp);
       
-      // Simulate device discovery with sample data
-      const sampleDevices: NetworkDevice[] = [
-        {
-          id: '1',
-          name: 'Your Device',
-          type: 'laptop',
-          ipAddress: localIp,
-          lastSeen: new Date(),
-          status: 'online',
-          signalStrength: 100,
-          manufacturer: 'Unknown',
-          responseTime: 1
-        },
-        {
-          id: '2',
-          name: 'Router',
-          type: 'router',
-          ipAddress: localIp.replace(/\d+$/, '1'),
-          lastSeen: new Date(),
-          status: 'online',
-          signalStrength: 95,
-          manufacturer: 'Generic Router',
-          responseTime: 2
+      const totalSteps = 10;
+      const mockDevices = generateMockDevices(localIp);
+      
+      for (let i = 0; i < totalSteps; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setScanProgress(((i + 1) / totalSteps) * 100);
+        
+        if (i >= 2) {
+          const devicesSlice = mockDevices.slice(0, Math.ceil((i + 1) * mockDevices.length / totalSteps));
+          setDevices(devicesSlice);
         }
-      ];
-
-      // Simulate progressive device discovery
-      for (let i = 0; i < sampleDevices.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setDevices(devices => [...devices, sampleDevices[i]]);
-        setScanProgress(((i + 1) / sampleDevices.length) * 100);
+        
+        if (i % 3 === 0) {
+          simulateNetworkStats();
+        }
       }
+
+      // Start periodic updates
+      if (scanTimeoutRef.current) {
+        clearInterval(scanTimeoutRef.current);
+      }
+      scanTimeoutRef.current = setInterval(() => {
+        simulateNetworkStats();
+        setDevices(prev => prev.map(device => ({
+          ...device,
+          signalStrength: Math.floor(Math.random() * 60 + 40),
+          responseTime: Math.floor(Math.random() * 100),
+          status: Math.random() > 0.1 ? 'online' : 'offline'
+        })));
+      }, 5000);
 
     } catch (error) {
       console.error('Error scanning network:', error);
@@ -124,27 +182,95 @@ const NetworkScanner = () => {
     }
   };
 
-  // Monitor active connections
-  const monitorConnections = useCallback(() => {
-    if ('performance' in window) {
-      const observer = new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        const activeRequests = entries.filter(
-          entry => entry.initiatorType === 'fetch' || entry.initiatorType === 'xmlhttprequest'
-        ).length;
-        setActiveConnections(activeRequests);
-      });
-      
-      observer.observe({ entryTypes: ['resource'] });
-      return () => observer.disconnect();
-    }
-  }, []);
+  const handleDeviceControl = (device: NetworkDevice) => {
+    setSelectedDevice(device);
+    setShowDeviceControl(true);
+    setChatMessages([
+      {
+        role: 'assistant',
+        content: `Conectado ao dispositivo ${device.name} (${device.ipAddress}). Como posso ajudar?`,
+        timestamp: new Date()
+      }
+    ]);
+  };
 
-  useEffect(() => {
-    // Initial setup
-    getLocalIpAddress().then(ip => setLocalIp(ip));
-    monitorConnections();
-  }, [monitorConnections]);
+  const processDeviceCommand = async (command: string) => {
+    if (!selectedDevice) return;
+
+    setIsProcessingCommand(true);
+    setChatMessages(prev => [...prev, {
+      role: 'user',
+      content: command,
+      timestamp: new Date()
+    }]);
+
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const prompt = `
+        You are a network device control assistant. Respond to the following command for a ${selectedDevice.type} device:
+        
+        Device Info:
+        - Name: ${selectedDevice.name}
+        - Type: ${selectedDevice.type}
+        - IP: ${selectedDevice.ipAddress}
+        - Status: ${selectedDevice.status}
+        - Manufacturer: ${selectedDevice.manufacturer}
+        
+        Command: ${command}
+        
+        Respond as if you're executing real network commands. Include:
+        1. Command interpretation
+        2. Action taken
+        3. Result/status
+        
+        Keep responses technical but understandable.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      
+      // Simulate device state changes based on commands
+      if (command.toLowerCase().includes('lock')) {
+        setDevices(prev => prev.map(d => 
+          d.id === selectedDevice.id ? { ...d, isLocked: true } : d
+        ));
+      } else if (command.toLowerCase().includes('unlock')) {
+        setDevices(prev => prev.map(d => 
+          d.id === selectedDevice.id ? { ...d, isLocked: false } : d
+        ));
+      } else if (command.toLowerCase().includes('restart') || command.toLowerCase().includes('reboot')) {
+        setDevices(prev => prev.map(d => 
+          d.id === selectedDevice.id ? { ...d, status: 'offline' } : d
+        ));
+        setTimeout(() => {
+          setDevices(prev => prev.map(d => 
+            d.id === selectedDevice.id ? { ...d, status: 'online' } : d
+          ));
+        }, 3000);
+      }
+
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.text(),
+        timestamp: new Date()
+      }]);
+    } catch (error) {
+      console.error('Error processing command:', error);
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Erro ao processar o comando. Por favor, tente novamente.',
+        timestamp: new Date()
+      }]);
+    } finally {
+      setIsProcessingCommand(false);
+    }
+  };
+
+  const handleSendCommand = () => {
+    if (!chatInput.trim()) return;
+    processDeviceCommand(chatInput.trim());
+    setChatInput('');
+  };
 
   const getDeviceIcon = (type: string) => {
     switch (type) {
@@ -166,6 +292,14 @@ const NetworkScanner = () => {
       default: return 'text-gray-400';
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) {
+        clearInterval(scanTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="hud-border p-6 scanner">
@@ -226,7 +360,7 @@ const NetworkScanner = () => {
         <div className="flex items-center justify-center h-48">
           <div className="cyber-spinner">
             <div className="absolute inset-0 flex items-center justify-center">
-              <Wifi className="h-6 w-6 text-primary animate-pulse" />
+              <RefreshCw className="h-6 w-6 text-primary animate-spin" />
             </div>
           </div>
         </div>
@@ -289,6 +423,35 @@ const NetworkScanner = () => {
                     </div>
                   )}
                 </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="text-primary/70">Status:</span>
+                    {device.isLocked ? (
+                      <span className="flex items-center text-red-400">
+                        <Lock className="h-4 w-4 mr-1" />
+                        Locked
+                      </span>
+                    ) : (
+                      <span className="flex items-center text-green-400">
+                        <Unlock className="h-4 w-4 mr-1" />
+                        Unlocked
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeviceControl(device)}
+                    disabled={!device.isControlEnabled || device.status === 'offline'}
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      device.isControlEnabled && device.status !== 'offline'
+                        ? 'bg-primary text-surface-dark hover:bg-primary-dark'
+                        : 'bg-surface/30 text-primary/50 cursor-not-allowed'
+                    }`}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Controlar</span>
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -300,6 +463,95 @@ const NetworkScanner = () => {
           <AlertCircle className="h-8 w-8 mb-2" />
           <p>No devices found on the network</p>
           <p className="text-sm">Click "Scan Network" to search for devices</p>
+        </div>
+      )}
+
+      {/* Device Control Chat Modal */}
+      {showDeviceControl && selectedDevice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface-dark border border-primary/30 rounded-lg w-full max-w-2xl">
+            {/* Chat Header */}
+            <div className="p-4 border-b border-primary/30 flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  {React.createElement(getDeviceIcon(selectedDevice.type), {
+                    className: "h-5 w-5 text-primary"
+                  })}
+                </div>
+                <div>
+                  <h3 className="font-medium text-primary">{selectedDevice.name}</h3>
+                  <p className="text-sm text-primary/70">{selectedDevice.ipAddress}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeviceControl(false)}
+                className="text-primary hover:text-primary-dark transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div
+              ref={chatContainerRef}
+              className="h-96 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-transparent"
+            >
+              {chatMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] p-3 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-primary/20 text-white'
+                        : 'bg-surface/50 text-primary border border-primary/30'
+                    }`}
+                  >
+                    <p>{message.content}</p>
+                    <p className="text-xs opacity-50 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {isProcessingCommand && (
+                <div className="flex justify-start">
+                  <div className="bg-surface/50 p-3 rounded-lg border border-primary/30">
+                    <div className="flex space-x-2">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <div className="p-4 border-t border-primary/30">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendCommand()}
+                  placeholder="Digite um comando para o dispositivo..."
+                  className="flex-1 bg-surface/50 border border-primary/30 rounded-lg px-4 py-2 text-white placeholder-primary/50 focus:outline-none focus:border-primary"
+                />
+                <button
+                  onClick={handleSendCommand}
+                  disabled={!chatInput.trim() || isProcessingCommand}
+                  className="bg-primary text-surface-dark p-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-xs text-primary/50 mt-2">
+                Comandos disponíveis: status, lock, unlock, restart, info
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
