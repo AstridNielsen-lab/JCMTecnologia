@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Mic, MicOff, Send, X, Volume2, VolumeX, DollarSign, Brain, Clock } from 'lucide-react';
+import { Mic, MicOff, Send, X, Volume2, VolumeX, DollarSign, Brain, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AIChatProps {
   repository: {
@@ -32,6 +32,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
   const [estimatedBudget, setEstimatedBudget] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [queuePosition, setQueuePosition] = useState<number>(0);
+  const [isNameExpanded, setIsNameExpanded] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -43,6 +44,18 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     retryCount: number
   }>>([]);
   const processingQueueRef = useRef<boolean>(false);
+
+  const formatRepoName = (name: string) => {
+    return name.replace(/-/g, ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const truncateName = (name: string) => {
+    const formattedName = formatRepoName(name);
+    if (formattedName.length <= 20 || isNameExpanded) return formattedName;
+    return formattedName.substring(0, 20) + '...';
+  };
 
   const getNeuralPrompt = () => `
     Voce e um assistente especializado em analise neural com foco em psicologia. psicanalise e filosofia.
@@ -418,9 +431,23 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
             ) : (
               <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
             )}
-            <h3 className="text-lg sm:text-xl font-semibold text-cyan-400 truncate">
-              {mode === 'neural' ? 'Analise Neural' : 'Consultoria de Projeto'} - {repository.name}
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-cyan-400">
+                {mode === 'neural' ? 'Analise Neural' : 'Consultoria de Projeto'} - {truncateName(repository.name)}
+              </h3>
+              {repository.name.length > 20 && (
+                <button
+                  onClick={() => setIsNameExpanded(!isNameExpanded)}
+                  className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  {isNameExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
