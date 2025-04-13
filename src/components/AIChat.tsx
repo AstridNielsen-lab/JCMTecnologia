@@ -1,60 +1,80 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Mic, MicOff, Send, X, Volume2, VolumeX, DollarSign, Brain, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mic, MicOff, Send, X, Volume2, VolumeX, DollarSign, Brain, Clock, ChevronDown, ChevronUp, Activity, Cpu } from 'lucide-react';
 
 interface AIChatProps {
-  repository: {
+  repository?: {
     name: string;
     description: string;
     topics: string[];
   };
   onClose: () => void;
-  mode?: 'neural' | 'product';
+  mode?: 'neural' | 'product' | 'behavioral' | 'emotional' | 'cognitive';
+  title?: string;
 }
 
-const API_KEY = "AIzaSyAxtrfdpByKg-1xK_iqvGpjPO4eIaKVis8";
+const API_KEY = "AIzaSyAV6k7MxnZWDe_APYW2XO8PV2QfjrcTtqE";
 const genAI = new GoogleGenerativeAI(API_KEY);
-const MONTHLY_RATE = 1000; // $1000 USD per month
 
-// More conservative rate limiting configuration
-const RATE_LIMIT_DELAY = 5000; // 5 second delay between requests
-const MAX_REQUESTS_PER_MINUTE = 1; // Maximum 1 request per minute
-const REQUEST_WINDOW = 60000; // 1 minute in milliseconds
-const MAX_RETRIES = 3; // Maximum number of retries for rate-limited requests
-const INITIAL_RETRY_DELAY = 10000; // Initial retry delay of 10 seconds
-
-const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }) => {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string, queued?: boolean }>>([]);
+const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product', title }) => {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(mode === 'neural');
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [estimatedBudget, setEstimatedBudget] = useState<string | null>(null);
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [queuePosition, setQueuePosition] = useState<number>(0);
   const [isNameExpanded, setIsNameExpanded] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const requestTimestampsRef = useRef<number[]>([]);
-  const retryQueueRef = useRef<Array<{
-    messageText: string,
-    operation: () => Promise<void>,
-    retryCount: number
-  }>>([]);
-  const processingQueueRef = useRef<boolean>(false);
 
-  const formatRepoName = (name: string) => {
-    return name.replace(/-/g, ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
-  const truncateName = (name: string) => {
-    const formattedName = formatRepoName(name);
-    if (formattedName.length <= 20 || isNameExpanded) return formattedName;
-    return formattedName.substring(0, 20) + '...';
+  const getPromptByMode = () => {
+    switch (mode) {
+      case 'behavioral':
+        return `
+          Você é um especialista em análise comportamental com foco em psicologia e neurociência.
+          
+          Contexto:
+          - Analise padrões de comportamento e suas origens psicológicas
+          - Utilize teorias comportamentais (Behaviorismo, Cognitivismo, etc.)
+          - Faça conexões com neurociência e processos cerebrais
+          - Mantenha um tom profissional e científico
+          - Evite diagnósticos, foque em compreensão e insights
+          
+          IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
+          Mantenha as respostas com uma leitura natural e fluida.
+        `;
+      case 'emotional':
+        return `
+          Você é um especialista em análise emocional com foco em psicologia e inteligência emocional.
+          
+          Contexto:
+          - Explore a profundidade e significado das emoções
+          - Utilize conceitos de inteligência emocional
+          - Faça conexões com teorias psicológicas sobre emoções
+          - Mantenha um tom empático e acolhedor
+          - Foque em autoconhecimento e desenvolvimento emocional
+          
+          IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
+          Mantenha as respostas com uma leitura natural e fluida.
+        `;
+      case 'cognitive':
+        return `
+          Você é um especialista em análise cognitiva com foco em processos mentais e neuropsicologia.
+          
+          Contexto:
+          - Analise padrões de pensamento e processos cognitivos
+          - Utilize teorias da psicologia cognitiva
+          - Faça conexões com neurociência cognitiva
+          - Mantenha um tom analítico e educativo
+          - Foque em compreensão e otimização dos processos mentais
+          
+          IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
+          Mantenha as respostas com uma leitura natural e fluida.
+        `;
+      default:
+        return repository ? getProductPrompt() : getNeuralPrompt();
+    }
   };
 
   const getNeuralPrompt = () => `
@@ -83,11 +103,11 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     Voce e Julio Campos Machado. um desenvolvedor Full Stack experiente com vasta experiencia em diversas tecnologias.
     
     Contexto do Projeto:
-    Nome: ${repository.name}
-    Descricao: ${repository.description}
-    Tecnologias: ${repository.topics.join('. ')}
+    Nome: ${repository?.name}
+    Descricao: ${repository?.description}
+    Tecnologias: ${repository?.topics.join('. ')}
     
-    Taxa fixa: $${MONTHLY_RATE} USD por mes de desenvolvimento.
+    Taxa fixa: $1000 USD por mes de desenvolvimento.
     
     Seu papel:
     Fornecer informacoes detalhadas sobre o projeto.
@@ -98,7 +118,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     
     Ao estimar orcamentos:
     Considere a complexidade das tecnologias envolvidas.
-    Calcule o custo total multiplicando $${MONTHLY_RATE} pelo numero de meses necessarios.
+    Calcule o custo total multiplicando $1000 pelo numero de meses necessarios.
     Forneca estimativas em meses e valor total em USD.
     Explique os fatores que influenciam o prazo.
     Seja especifico sobre as fases do desenvolvimento.
@@ -114,156 +134,10 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
     Mantenha um tom amigavel mas profissional.
     Use sua experiencia para justificar as estimativas.
     Seja especifico sobre as tecnologias e processos.
-    SEMPRE mencione a taxa mensal de $${MONTHLY_RATE} USD.
+    SEMPRE mencione a taxa mensal de $1000 USD.
     Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
     Mantenha as respostas com uma leitura natural e fluida.
   `;
-
-  const checkRateLimit = () => {
-    const now = Date.now();
-    requestTimestampsRef.current = requestTimestampsRef.current.filter(
-      timestamp => now - timestamp < REQUEST_WINDOW
-    );
-    
-    if (requestTimestampsRef.current.length >= MAX_REQUESTS_PER_MINUTE) {
-      const oldestRequest = requestTimestampsRef.current[0];
-      const timeUntilNextSlot = REQUEST_WINDOW - (now - oldestRequest);
-      return timeUntilNextSlot > 0 ? timeUntilNextSlot : 0;
-    }
-    
-    return 0;
-  };
-
-  const updateQueuePosition = () => {
-    setQueuePosition(retryQueueRef.current.length);
-  };
-
-  const processRetryQueue = async () => {
-    if (processingQueueRef.current || retryQueueRef.current.length === 0) return;
-    
-    processingQueueRef.current = true;
-    setIsRateLimited(true);
-    
-    while (retryQueueRef.current.length > 0) {
-      updateQueuePosition();
-      
-      const waitTime = checkRateLimit();
-      if (waitTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-      
-      const nextRequest = retryQueueRef.current[0];
-      if (nextRequest) {
-        try {
-          await nextRequest.operation();
-          retryQueueRef.current.shift(); // Remove successful request from queue
-        } catch (error) {
-          console.error('Error processing queued request:', error);
-          nextRequest.retryCount++;
-          
-          if (nextRequest.retryCount >= MAX_RETRIES) {
-            retryQueueRef.current.shift(); // Remove failed request from queue
-            setMessages(prev => [...prev, { 
-              role: 'assistant', 
-              content: 'Desculpe. nao foi possivel processar sua mensagem devido aos limites da API. Por favor. tente novamente mais tarde.' 
-            }]);
-          } else {
-            // Move to end of queue for retry
-            retryQueueRef.current.push(retryQueueRef.current.shift()!);
-          }
-        }
-      }
-      
-      // Add delay between requests
-      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-    }
-    
-    processingQueueRef.current = false;
-    setIsRateLimited(false);
-    setQueuePosition(0);
-  };
-
-  const addToRetryQueue = (messageText: string, operation: () => Promise<void>) => {
-    retryQueueRef.current.push({
-      messageText,
-      operation,
-      retryCount: 0
-    });
-    
-    // Add queued indicator to messages
-    setMessages(prev => [...prev, { 
-      role: 'user', 
-      content: messageText,
-      queued: true 
-    }]);
-    
-    updateQueuePosition();
-    processRetryQueue();
-  };
-
-  const executeWithRetry = async (operation: () => Promise<any>, retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY) => {
-    try {
-      const waitTime = checkRateLimit();
-      if (waitTime > 0) {
-        if (retries > 0) {
-          setIsRateLimited(true);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          setIsRateLimited(false);
-          return executeWithRetry(operation, retries - 1, delay * 2);
-        } else {
-          return false; // Indicate rate limit failure
-        }
-      }
-
-      requestTimestampsRef.current.push(Date.now());
-      await operation();
-      return true; // Indicate success
-    } catch (error) {
-      if (error.message?.includes('429') && retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return executeWithRetry(operation, retries - 1, delay * 2);
-      }
-      throw error;
-    }
-  };
-
-  useEffect(() => {
-    if (mode === 'product') {
-      generateInitialEstimate();
-    }
-  }, [repository]);
-
-  const generateInitialEstimate = async () => {
-    const generateEstimate = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      const chat = model.startChat({
-        history: [
-          {
-            role: "user",
-            parts: [getProductPrompt() + "\n\nGere uma estimativa de orcamento inicial baseada nas informacoes do projeto. usando a taxa mensal de $1000 USD."],
-          },
-        ],
-      });
-
-      const result = await chat.sendMessage("Considerando a taxa de $1000 USD por mes. qual seria uma estimativa inicial de orcamento para este projeto?");
-      const response = await result.response;
-      const estimateText = response.text();
-      setEstimatedBudget(estimateText);
-    };
-
-    try {
-      const success = await executeWithRetry(generateEstimate);
-      if (!success) {
-        addToRetryQueue("estimate", generateEstimate);
-      }
-    } catch (error) {
-      console.error('Error generating initial estimate:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Desculpe. nao foi possivel gerar uma estimativa inicial no momento. Por favor. tente novamente mais tarde.' 
-      }]);
-    }
-  };
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -307,23 +181,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           console.error('Speech recognition error:', event.error);
           setIsRecording(false);
-          
-          let errorMessage = 'Erro no reconhecimento de voz.';
-          switch (event.error) {
-            case 'no-speech':
-              errorMessage = 'Nenhuma fala detectada. Por favor. fale mais alto.';
-              break;
-            case 'audio-capture':
-              errorMessage = 'Microfone nao encontrado.';
-              break;
-            case 'not-allowed':
-              errorMessage = 'Permissao do microfone negada.';
-              break;
-            case 'network':
-              errorMessage = 'Erro de conexao.';
-              break;
-          }
-          setInput(errorMessage);
+          setInput('Erro no reconhecimento de voz. Por favor, tente novamente.');
         };
 
         recognition.onend = () => {
@@ -390,7 +248,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
         history: [
           {
             role: "user",
-            parts: [mode === 'neural' ? getNeuralPrompt() : getProductPrompt()],
+            parts: [getPromptByMode()],
           },
         ],
       });
@@ -399,54 +257,49 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
       const response = await result.response;
       const responseText = response.text();
 
-      // Remove queued status if this was a queued message
-      setMessages(prev => prev.map(msg => 
-        msg.content === messageText && msg.queued 
-          ? { ...msg, queued: false }
-          : msg
-      ));
-
       setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
-      if (mode === 'neural') {
+      
+      if (mode !== 'product') {
         speakMessage(responseText);
       }
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'Desculpe. ocorreu um erro ao processar sua mensagem. Por favor. tente novamente em alguns momentos.' 
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns momentos.' 
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const getIcon = () => {
+    switch (mode) {
+      case 'behavioral':
+        return Brain;
+      case 'emotional':
+        return Activity;
+      case 'cognitive':
+        return Cpu;
+      case 'product':
+        return DollarSign;
+      default:
+        return Brain;
+    }
+  };
+
+  const Icon = getIcon();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-black border border-cyan-500/30 rounded-lg w-full max-w-2xl h-[90vh] sm:h-[600px] flex flex-col">
         <div className="p-3 sm:p-4 border-b border-cyan-500/30 flex justify-between items-center rounded-t-lg">
           <div className="flex items-center space-x-3">
-            {mode === 'neural' ? (
-              <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
-            ) : (
-              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
-            )}
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             <div className="flex items-center space-x-2">
-              <h3 className="text-lg sm:text-xl font-semibold text-cyan-400">
-                {mode === 'neural' ? 'Analise Neural' : 'Consultoria de Projeto'} - {truncateName(repository.name)}
+              <h3 className="text-lg sm:text-xl font-semibold text-primary">
+                {title || (repository ? `Consultoria de Projeto - ${repository.name}` : 'Análise Neural')}
               </h3>
-              {repository.name.length > 20 && (
-                <button
-                  onClick={() => setIsNameExpanded(!isNameExpanded)}
-                  className="text-cyan-400 hover:text-cyan-300 transition-colors"
-                >
-                  {isNameExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-              )}
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -456,12 +309,12 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
                 if (lastAssistantMessage) speakMessage(lastAssistantMessage.content);
               }}
               className={`p-1.5 sm:p-2 rounded-full transition-colors ${
-                isSpeaking ? 'bg-red-500 text-white' : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                isSpeaking ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
               }`}
             >
               {isSpeaking ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
-            <button onClick={onClose} className="text-cyan-400 hover:text-cyan-300 transition-colors">
+            <button onClick={onClose} className="text-primary hover:text-primary-dark transition-colors">
               <X className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
@@ -469,78 +322,41 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
 
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-black/30"
+          className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-black/30"
         >
-          <div className="bg-cyan-950/30 p-3 sm:p-4 rounded-lg border border-cyan-500/30">
-            <p className="font-semibold text-cyan-400 text-sm sm:text-base">
-              {mode === 'neural' ? 'Analise Neural:' : 'Detalhes do Projeto:'}
-            </p>
-            <p className="text-gray-300 text-sm sm:text-base">{repository.description}</p>
-            <p className="mt-2 text-gray-300 text-sm sm:text-base">
-              {mode === 'neural' ? 'Areas:' : 'Tecnologias:'} {repository.topics.join('. ')}
-            </p>
-            {mode === 'product' && estimatedBudget && (
-              <div className="mt-3 p-2 bg-green-900/20 rounded border border-green-500/30">
-                <p className="text-green-400 text-sm font-semibold">Estimativa de Orcamento:</p>
-                <p className="text-green-300 text-sm">{estimatedBudget}</p>
-              </div>
-            )}
-          </div>
-
           {messages.map((message, index) => (
             <div
               key={index}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[85%] sm:max-w-[80%] p-2.5 sm:p-3 rounded-lg text-sm sm:text-base ${
+                className={`max-w-[85%] p-3 rounded-lg ${
                   message.role === 'user'
-                    ? message.queued
-                      ? 'bg-yellow-950/30 border border-yellow-500/30 text-yellow-100'
-                      : 'bg-purple-950/30 border border-purple-500/30 text-purple-100'
-                    : mode === 'neural'
-                    ? 'bg-cyan-950/30 border border-cyan-500/30 text-cyan-100'
-                    : 'bg-green-950/30 border border-green-500/30 text-green-100'
+                    ? 'bg-primary/20 text-white'
+                    : 'bg-surface/50 text-primary border border-primary/30'
                 }`}
               >
                 {message.content}
-                {message.queued && (
-                  <div className="flex items-center mt-1 text-yellow-400 text-xs">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Mensagem na fila...
-                  </div>
-                )}
               </div>
             </div>
           ))}
           
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-cyan-950/30 p-2.5 sm:p-3 rounded-lg border border-cyan-500/30">
+              <div className="bg-surface/50 p-3 rounded-lg border border-primary/30">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-cyan-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isRateLimited && queuePosition > 0 && (
-            <div className="flex justify-center">
-              <div className="bg-yellow-950/30 p-2 rounded-lg border border-yellow-500/30 text-yellow-400 text-sm">
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Aguardando limite de requisicoes... Posicao na fila: {queuePosition}
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-3 sm:p-4 border-t border-cyan-500/30">
+        <div className="p-3 sm:p-4 border-t border-primary/30">
           <div className="flex space-x-2">
-            {mode === 'neural' && (
+            {mode !== 'product' && (
               <button
                 onClick={() => {
                   if (isRecording) {
@@ -556,7 +372,7 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
                   }
                 }}
                 className={`p-2 rounded-full transition-colors ${
-                  isRecording ? 'bg-red-500 text-white' : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                  isRecording ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
                 }`}
               >
                 {isRecording ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -567,13 +383,13 @@ const AIChat: React.FC<AIChatProps> = ({ repository, onClose, mode = 'product' }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={mode === 'neural' ? "Compartilhe seus pensamentos..." : "Faca uma pergunta sobre o projeto..."}
-              className="flex-1 bg-black/50 border border-cyan-500/30 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base text-cyan-100 placeholder-cyan-600 focus:outline-none focus:border-cyan-400"
+              placeholder={mode === 'product' ? "Faça uma pergunta sobre o projeto..." : "Compartilhe seus pensamentos..."}
+              className="flex-1 bg-black/50 border border-primary/30 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base text-primary placeholder-primary/50 focus:outline-none focus:border-primary"
             />
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || input === 'Ouvindo... Fale agora'}
-              className="bg-cyan-500 text-black p-2 rounded-lg hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-all duration-200"
+              className="bg-primary text-black p-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
             >
               <Send className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>

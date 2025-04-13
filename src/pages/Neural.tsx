@@ -1,41 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Activity, Mic, MicOff, Send, Volume2, VolumeX, Search, Filter, MessageSquare, Cpu } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Brain, Activity, Mic, MicOff, Send, Volume2, VolumeX, Search, Filter, MessageSquare, Cpu, Shield } from 'lucide-react';
+import AIChat from '../components/AIChat';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  timestamp: Date;
 }
 
-const API_KEY = "AIzaSyCqsdGmlJfpYAzpu8uph1VAjI51XbB5iV0";
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Constants for speech detection
-const SPEECH_PAUSE_THRESHOLD = 1500; // 1.5 seconds of silence to trigger send
-const MIN_SPEECH_LENGTH = 3; // Minimum number of characters to consider as valid speech
-
-// Sound effects URLs
-const HOVER_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3';
-const CLICK_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+interface Permissions {
+  microphone: boolean;
+  speechSynthesis: boolean;
+}
 
 const Neural = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [showBehavioralChat, setShowBehavioralChat] = useState(false);
+  const [showEmotionalChat, setShowEmotionalChat] = useState(false);
+  const [showCognitiveChat, setShowCognitiveChat] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
-  
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  const [permissions, setPermissions] = useState<Permissions>({
+    microphone: false,
+    speechSynthesis: false
+  });
+
   const hoverSoundRef = useRef<HTMLAudioElement | null>(null);
   const clickSoundRef = useRef<HTMLAudioElement | null>(null);
 
+  // Sound effects URLs
+  const HOVER_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3';
+  const CLICK_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+
   useEffect(() => {
+    // Check if permissions have been granted before
+    const hasGrantedPermissions = localStorage.getItem('neuralPermissionsGranted');
+    if (!hasGrantedPermissions) {
+      setShowPermissionsDialog(true);
+    } else {
+      checkPermissions();
+    }
+
     // Initialize sound effects
     hoverSoundRef.current = new Audio(HOVER_SOUND);
     clickSoundRef.current = new Audio(CLICK_SOUND);
@@ -44,6 +49,42 @@ const Neural = () => {
     hoverSoundRef.current.load();
     clickSoundRef.current.load();
   }, []);
+
+  const checkPermissions = async () => {
+    try {
+      // Check microphone permission
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStream.getTracks().forEach(track => track.stop());
+      setPermissions(prev => ({ ...prev, microphone: true }));
+    } catch (error) {
+      console.error('Microphone permission denied:', error);
+      setPermissions(prev => ({ ...prev, microphone: false }));
+    }
+
+    // Check speech synthesis
+    if ('speechSynthesis' in window) {
+      setPermissions(prev => ({ ...prev, speechSynthesis: true }));
+    }
+  };
+
+  const handleRequestPermissions = async () => {
+    try {
+      // Request microphone permission
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStream.getTracks().forEach(track => track.stop());
+      setPermissions(prev => ({ ...prev, microphone: true }));
+
+      // Speech synthesis doesn't need explicit permission
+      if ('speechSynthesis' in window) {
+        setPermissions(prev => ({ ...prev, speechSynthesis: true }));
+      }
+
+      localStorage.setItem('neuralPermissionsGranted', 'true');
+      setShowPermissionsDialog(false);
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+  };
 
   const playHoverSound = () => {
     if (hoverSoundRef.current) {
@@ -56,151 +97,6 @@ const Neural = () => {
     if (clickSoundRef.current) {
       clickSoundRef.current.currentTime = 0;
       clickSoundRef.current.play();
-    }
-  };
-
-  // Speech recognition setup
-  useEffect(() => {
-    if (isRecording) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'pt-BR';
-        recognitionRef.current = recognition;
-
-        recognition.onstart = () => {
-          setIsRecording(true);
-          setInput('Ouvindo... Fale agora');
-          setCurrentTranscript('');
-        };
-
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = Array.from(event.results)
-            .map(result => result[0].transcript)
-            .join(' ');
-          
-          setCurrentTranscript(transcript);
-          setInput(transcript);
-
-          if (pauseTimeoutRef.current) {
-            clearTimeout(pauseTimeoutRef.current);
-          }
-          pauseTimeoutRef.current = setTimeout(handleSpeechPause, SPEECH_PAUSE_THRESHOLD);
-        };
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error('Speech recognition error:', event.error);
-          setIsRecording(false);
-          setInput('Erro no reconhecimento de voz. Tente novamente.');
-        };
-
-        recognition.onend = () => {
-          if (isRecording) {
-            recognition.start();
-          }
-        };
-
-        recognition.start();
-      }
-    } else {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      if (pauseTimeoutRef.current) {
-        clearTimeout(pauseTimeoutRef.current);
-      }
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      if (pauseTimeoutRef.current) {
-        clearTimeout(pauseTimeoutRef.current);
-      }
-    };
-  }, [isRecording]);
-
-  const handleSpeechPause = async () => {
-    if (currentTranscript.length >= MIN_SPEECH_LENGTH) {
-      await handleSend(currentTranscript);
-      setCurrentTranscript('');
-    }
-  };
-
-  const speakMessage = (text: string) => {
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    
-    const voices = speechSynthesis.getVoices();
-    const portugueseVoice = voices.find(voice => voice.lang.includes('pt'));
-    if (portugueseVoice) {
-      utterance.voice = portugueseVoice;
-    }
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    
-    speechSynthesisRef.current = utterance;
-    speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-  };
-
-  const handleSend = async (text?: string) => {
-    const messageText = text || input;
-    if (!messageText.trim() || messageText === 'Ouvindo... Fale agora') return;
-
-    playClickSound();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
-    setIsProcessing(true);
-
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      const prompt = `
-        Você é um assistente especializado em análise neural com foco em psicologia, psicanálise e filosofia.
-        
-        Contexto:
-        - Use conceitos de psicologia e psicanálise para analisar as falas do usuário
-        - Faça conexões com teorias filosóficas relevantes
-        - Mantenha um tom profissional mas acolhedor
-        - Cite pensadores e teorias quando relevante
-        - Evite diagnósticos, foque em reflexões e insights
-        
-        IMPORTANTE: Use apenas pontos e virgulas para pontuacao. Evite caracteres especiais.
-        Mantenha as respostas com uma leitura natural e fluida.
-
-        Mensagem do usuário: ${messageText}
-      `;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const aiMessage = response.text();
-      
-      setMessages(prev => [...prev, { role: 'assistant', content: aiMessage }]);
-      speakMessage(aiMessage);
-    } catch (error) {
-      console.error('Error generating response:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.' 
-      }]);
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -217,17 +113,20 @@ const Neural = () => {
     {
       title: 'Análise Comportamental',
       description: 'Compreenda padrões de comportamento e suas origens psicológicas',
-      icon: Brain
+      icon: Brain,
+      onClick: () => setShowBehavioralChat(true)
     },
     {
       title: 'Insights Emocionais',
       description: 'Explore a profundidade das emoções e seus significados',
-      icon: Activity
+      icon: Activity,
+      onClick: () => setShowEmotionalChat(true)
     },
     {
       title: 'Padrões Cognitivos',
       description: 'Identifique e analise padrões de pensamento',
-      icon: Cpu
+      icon: Cpu,
+      onClick: () => setShowCognitiveChat(true)
     }
   ];
 
@@ -237,6 +136,48 @@ const Neural = () => {
       <div className="absolute inset-0 hex-grid opacity-30" />
       <div className="absolute inset-0 data-lines" />
       <div className="absolute inset-0 bg-grid-pattern" />
+
+      {/* Permissions Dialog */}
+      {showPermissionsDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface-dark border border-primary/30 rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center space-x-3 mb-4">
+              <Shield className="h-6 w-6 text-primary" />
+              <h3 className="text-xl font-bold text-primary">Permissões Necessárias</h3>
+            </div>
+            
+            <p className="text-primary/80 mb-6">
+              Para uma melhor experiência, precisamos das seguintes permissões:
+            </p>
+
+            <ul className="space-y-4 mb-6">
+              <li className="flex items-center space-x-3">
+                <Mic className="h-5 w-5 text-primary" />
+                <span className="text-primary">Acesso ao microfone para entrada de voz</span>
+              </li>
+              <li className="flex items-center space-x-3">
+                <Volume2 className="h-5 w-5 text-primary" />
+                <span className="text-primary">Síntese de voz para respostas faladas</span>
+              </li>
+            </ul>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowPermissionsDialog(false)}
+                className="px-4 py-2 text-primary border border-primary/30 rounded-lg hover:bg-primary/10"
+              >
+                Depois
+              </button>
+              <button
+                onClick={handleRequestPermissions}
+                className="px-4 py-2 bg-primary text-surface-dark rounded-lg hover:bg-primary-dark"
+              >
+                Permitir Acesso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
@@ -297,7 +238,10 @@ const Neural = () => {
             <div
               key={index}
               className="hud-border rounded-lg overflow-hidden scanner group cursor-pointer"
-              onClick={() => playClickSound()}
+              onClick={() => {
+                playClickSound();
+                card.onClick();
+              }}
               onMouseEnter={playHoverSound}
             >
               <div className="p-6">
@@ -316,86 +260,30 @@ const Neural = () => {
           ))}
         </div>
 
-        {/* Chat Interface */}
-        <div className="hud-border rounded-lg p-6 scanner">
-          <div
-            ref={chatContainerRef}
-            className="mb-6 space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface/30"
-          >
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[85%] p-4 rounded-lg ${
-                  message.role === 'user'
-                    ? 'bg-primary/20 border border-primary/30'
-                    : 'bg-surface/50 border border-primary/30'
-                }`}>
-                  <p className="text-white">{message.content}</p>
-                </div>
-              </div>
-            ))}
-            
-            {isProcessing && (
-              <div className="flex justify-start">
-                <div className="bg-surface/50 p-4 rounded-lg border border-primary/30">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Chat Interfaces */}
+        {showBehavioralChat && (
+          <AIChat
+            mode="behavioral"
+            title="Análise Comportamental"
+            onClose={() => setShowBehavioralChat(false)}
+          />
+        )}
 
-          <div className="flex space-x-2">
-            <button
-              onClick={() => {
-                playClickSound();
-                setIsRecording(!isRecording);
-              }}
-              onMouseEnter={playHoverSound}
-              className={`p-3 rounded-lg transition-colors ${
-                isRecording ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
-              }`}
-            >
-              {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Digite sua mensagem ou use o microfone..."
-              className="flex-1 bg-surface/50 border border-primary/30 rounded-lg px-4 py-2 text-white placeholder-primary/50 focus:outline-none focus:border-primary"
-            />
-            <button
-              onClick={() => handleSend()}
-              onMouseEnter={playHoverSound}
-              disabled={!input.trim() || input === 'Ouvindo... Fale agora'}
-              className="bg-primary text-surface-dark p-3 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => {
-                playClickSound();
-                isSpeaking ? stopSpeaking() : (() => {
-                  const lastAssistantMessage = messages.findLast(m => m.role === 'assistant');
-                  if (lastAssistantMessage) speakMessage(lastAssistantMessage.content);
-                })();
-              }}
-              onMouseEnter={playHoverSound}
-              className={`p-3 rounded-lg transition-colors ${
-                isSpeaking ? 'bg-red-500 text-white' : 'bg-primary/20 text-primary hover:bg-primary/30'
-              }`}
-            >
-              {isSpeaking ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
+        {showEmotionalChat && (
+          <AIChat
+            mode="emotional"
+            title="Insights Emocionais"
+            onClose={() => setShowEmotionalChat(false)}
+          />
+        )}
+
+        {showCognitiveChat && (
+          <AIChat
+            mode="cognitive"
+            title="Padrões Cognitivos"
+            onClose={() => setShowCognitiveChat(false)}
+          />
+        )}
       </div>
     </div>
   );
