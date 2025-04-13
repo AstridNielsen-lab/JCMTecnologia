@@ -29,8 +29,13 @@ import {
   Radar,
   Waves,
   Cpu,
-  Network
+  Network,
+  Brain
 } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const API_KEY = "AIzaSyAV6k7MxnZWDe_APYW2XO8PV2QfjrcTtqE";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 interface ScannerCard {
   id: string;
@@ -148,6 +153,9 @@ const NetworkScanner = () => {
   ]);
 
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [showAIReport, setShowAIReport] = useState(false);
+  const [aiReport, setAIReport] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const toggleCardExpand = (cardId: string) => {
     setExpandedCards(prev => ({
@@ -162,10 +170,47 @@ const NetworkScanner = () => {
     ));
   };
 
-  const toggleScanner = (cardId: string) => {
+  const toggleScanner = async (cardId: string) => {
     setScannerCards(prev => prev.map(card => 
       card.id === cardId ? { ...card, active: !card.active } : card
     ));
+
+    const card = scannerCards.find(c => c.id === cardId);
+    if (card && !card.active) {
+      await generateAIReport(card);
+    }
+  };
+
+  const generateAIReport = async (card: ScannerCard) => {
+    setIsGeneratingReport(true);
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const prompt = `
+        Analyze network scanning data for ${card.title}:
+        
+        Scanner Type: ${card.type}
+        Status: Active
+        Time: ${new Date().toLocaleTimeString()}
+        
+        Generate a detailed technical report including:
+        1. Current network status
+        2. Potential security risks
+        3. Performance metrics
+        4. Recommendations
+        
+        Format the response in a clear, technical style suitable for network administrators.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      setAIReport(response.text());
+      setShowAIReport(true);
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      setAIReport('Error generating report. Please try again.');
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   const getStatusColor = (card: ScannerCard) => {
@@ -197,29 +242,33 @@ const NetworkScanner = () => {
         </div>
 
         {/* Scanner Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {scannerCards.map(card => (
             <div 
               key={card.id}
-              className="hud-border rounded-lg overflow-hidden scanner"
+              className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300"
             >
               <div className="p-6">
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 bg-${card.color}-500/10 rounded-lg`}>
-                      <card.icon className={`h-6 w-6 text-${card.color}-400`} />
-                    </div>
-                    <h3 className="text-lg font-bold text-primary">{card.title}</h3>
-                  </div>
+                  <h3 className="text-xl font-bold text-primary text-glow">
+                    {card.title}
+                  </h3>
                   <div className={`flex items-center ${getStatusColor(card)}`}>
                     <span className="h-2 w-2 rounded-full bg-current mr-2" />
                     <span className="text-sm">{getStatusText(card)}</span>
                   </div>
                 </div>
 
+                {/* Card Icon */}
+                <div className="flex justify-center mb-4">
+                  <div className={`p-4 bg-surface/30 rounded-full border border-${card.color}-500/30 group-hover:border-${card.color}-500 transition-all duration-300`}>
+                    <card.icon className={`h-8 w-8 text-${card.color}-400 group-hover:scale-110 transition-transform`} />
+                  </div>
+                </div>
+
                 {/* Card Description */}
-                <p className="text-primary/70 mb-6">{card.description}</p>
+                <p className="text-primary/80 mb-6">{card.description}</p>
 
                 {/* Authorization Button */}
                 {!card.authorized ? (
@@ -271,6 +320,41 @@ const NetworkScanner = () => {
             </div>
           ))}
         </div>
+
+        {/* AI Report Modal */}
+        {showAIReport && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-surface-dark border border-primary/30 rounded-lg w-full max-w-2xl">
+              <div className="p-4 border-b border-primary/30 flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold text-primary">AI Analysis Report</h3>
+                </div>
+                <button
+                  onClick={() => setShowAIReport(false)}
+                  className="text-primary hover:text-primary-dark transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
+                {isGeneratingReport ? (
+                  <div className="flex items-center justify-center">
+                    <div className="cyber-spinner">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <RefreshCw className="h-6 w-6 text-primary animate-spin" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="prose prose-invert">
+                    <pre className="whitespace-pre-wrap text-primary/80">{aiReport}</pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
