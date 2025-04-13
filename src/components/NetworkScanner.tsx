@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Wifi, 
   Smartphone, 
@@ -33,6 +33,7 @@ import {
   Brain
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API_KEY = "AIzaSyAV6k7MxnZWDe_APYW2XO8PV2QfjrcTtqE";
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -46,6 +47,11 @@ interface ScannerCard {
   authorized: boolean;
   active: boolean;
   type: 'network' | 'device' | 'security' | 'wireless';
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 const NetworkScanner = () => {
@@ -152,10 +158,83 @@ const NetworkScanner = () => {
     }
   ]);
 
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [chatInput, setChatInput] = useState('');
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [showAIReport, setShowAIReport] = useState(false);
   const [aiReport, setAIReport] = useState('');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const handleSendMessage = async (cardId: string) => {
+    if (!chatInput.trim()) return;
+
+    const card = scannerCards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: chatInput
+    };
+
+    setChatMessages(prev => ({
+      ...prev,
+      [cardId]: [...(prev[cardId] || []), userMessage]
+    }));
+    setChatInput('');
+
+    setIsAnalyzing(true);
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const prompt = `
+        You are a specialized network analysis AI assistant for ${card.title}.
+        Context: ${card.description}
+        Type: ${card.type}
+        User Question: ${chatInput}
+
+        Provide a technical analysis and response focusing on:
+        - Network security implications
+        - Performance considerations
+        - Best practices
+        - Potential risks and mitigations
+
+        Keep the response technical but clear.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+
+      const aiMessage: ChatMessage = {
+        role: 'assistant',
+        content: response.text()
+      };
+
+      setChatMessages(prev => ({
+        ...prev,
+        [cardId]: [...(prev[cardId] || []), aiMessage]
+      }));
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'
+      };
+      setChatMessages(prev => ({
+        ...prev,
+        [cardId]: [...(prev[cardId] || []), errorMessage]
+      }));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const toggleCardExpand = (cardId: string) => {
     setExpandedCards(prev => ({
@@ -227,13 +306,11 @@ const NetworkScanner = () => {
 
   return (
     <div className="min-h-screen bg-surface-dark py-16 relative overflow-hidden">
-      {/* Background Effects */}
       <div className="absolute inset-0 hex-grid opacity-30" />
       <div className="absolute inset-0 data-lines" />
       <div className="absolute inset-0 bg-grid-pattern" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Header */}
         <div className="mb-12 relative">
           <div className="absolute -left-4 -top-4 w-20 h-20 border-l-2 border-t-2 border-primary opacity-50" />
           <div className="absolute -right-4 -top-4 w-20 h-20 border-r-2 border-t-2 border-primary opacity-50" />
@@ -241,46 +318,139 @@ const NetworkScanner = () => {
           <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent box-glow" />
         </div>
 
-        {/* Scanner Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {scannerCards.map(card => (
-            <div 
+            <motion.div
               key={card.id}
-              className="hud-border rounded-lg overflow-hidden scanner group transform hover:scale-105 transition-all duration-300"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="hud-border rounded-lg overflow-hidden scanner group"
             >
               <div className="p-6">
-                {/* Card Header */}
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-primary text-glow">
                     {card.title}
                   </h3>
                   <div className={`flex items-center ${getStatusColor(card)}`}>
-                    <span className="h-2 w-2 rounded-full bg-current mr-2" />
+                    <motion.span
+                      animate={{
+                        scale: card.active ? [1, 1.2, 1] : 1,
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="h-2 w-2 rounded-full bg-current mr-2"
+                    />
                     <span className="text-sm">{getStatusText(card)}</span>
                   </div>
                 </div>
 
-                {/* Card Icon */}
-                <div className="flex justify-center mb-4">
+                <motion.div
+                  className="flex justify-center mb-4"
+                  animate={{
+                    rotateY: card.active ? 360 : 0
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
                   <div className={`p-4 bg-surface/30 rounded-full border border-${card.color}-500/30 group-hover:border-${card.color}-500 transition-all duration-300`}>
                     <card.icon className={`h-8 w-8 text-${card.color}-400 group-hover:scale-110 transition-transform`} />
                   </div>
-                </div>
+                </motion.div>
 
-                {/* Card Description */}
                 <p className="text-primary/80 mb-6">{card.description}</p>
 
-                {/* Authorization Button */}
+                <button
+                  onClick={() => setActiveChatId(activeChatId === card.id ? null : card.id)}
+                  className="w-full flex items-center justify-center space-x-2 bg-surface/50 text-primary p-2 rounded-lg hover:bg-surface/70 transition-all duration-300 border border-primary/30 mb-4"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>AI Chat Assistant</span>
+                </button>
+
+                <AnimatePresence>
+                  {activeChatId === card.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="border-t border-primary/30 pt-4"
+                    >
+                      <div
+                        ref={chatContainerRef}
+                        className="h-48 overflow-y-auto mb-4 space-y-4 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-transparent"
+                      >
+                        {(chatMessages[card.id] || []).map((message, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: message.role === 'user' ? 20 : -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[80%] p-3 rounded-lg ${
+                                message.role === 'user'
+                                  ? 'bg-primary/20 text-white'
+                                  : 'bg-surface/50 text-primary border border-primary/30'
+                              }`}
+                            >
+                              {message.content}
+                            </div>
+                          </motion.div>
+                        ))}
+                        {isAnalyzing && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex justify-start"
+                          >
+                            <div className="bg-surface/50 p-3 rounded-lg border border-primary/30">
+                              <div className="flex space-x-2">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(card.id)}
+                          placeholder="Ask about network analysis..."
+                          className="flex-1 bg-surface/50 border border-primary/30 rounded-lg px-3 py-2 text-white placeholder-primary/50 focus:outline-none focus:border-primary"
+                        />
+                        <button
+                          onClick={() => handleSendMessage(card.id)}
+                          disabled={!chatInput.trim() || isAnalyzing}
+                          className="bg-primary text-surface-dark p-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {!card.authorized ? (
                   <button
                     onClick={() => toggleAuthorization(card.id)}
-                    className="w-full flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 group"
+                    className="w-full flex items-center justify-center space-x-2 bg-surface/50 text-primary p-3 rounded-lg hover:bg-primary hover:text-surface-dark transition-all duration-300 border border-primary/30 group mt-4"
                   >
                     <Lock className="h-5 w-5 group-hover:scale-110 transition-transform" />
                     <span>Autorizar Scanner</span>
                   </button>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 mt-4">
                     <button
                       onClick={() => toggleScanner(card.id)}
                       className={`w-full flex items-center justify-center space-x-2 ${
@@ -303,9 +473,12 @@ const NetworkScanner = () => {
                   </div>
                 )}
 
-                {/* Active Scanner Content */}
                 {card.active && (
-                  <div className="mt-4 pt-4 border-t border-primary/30">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-4 pt-4 border-t border-primary/30"
+                  >
                     <div className="flex items-center justify-center">
                       <div className="cyber-spinner">
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -314,47 +487,12 @@ const NetworkScanner = () => {
                       </div>
                     </div>
                     <p className="text-center text-primary/70 mt-2">Scanner em execução...</p>
-                  </div>
+                  </motion.div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
-
-        {/* AI Report Modal */}
-        {showAIReport && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-surface-dark border border-primary/30 rounded-lg w-full max-w-2xl">
-              <div className="p-4 border-b border-primary/30 flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <Brain className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold text-primary">AI Analysis Report</h3>
-                </div>
-                <button
-                  onClick={() => setShowAIReport(false)}
-                  className="text-primary hover:text-primary-dark transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-4 max-h-[60vh] overflow-y-auto">
-                {isGeneratingReport ? (
-                  <div className="flex items-center justify-center">
-                    <div className="cyber-spinner">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <RefreshCw className="h-6 w-6 text-primary animate-spin" />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="prose prose-invert">
-                    <pre className="whitespace-pre-wrap text-primary/80">{aiReport}</pre>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
