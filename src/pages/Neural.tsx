@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Activity, Mic, MicOff, Send, Volume2, VolumeX, Search, Filter, MessageSquare, Cpu, Shield } from 'lucide-react';
+import { Brain, Activity, Mic, MicOff, Volume2, VolumeX, Shield, Cpu, Heart, Lightbulb, Zap, Puzzle, Eye, Network, MessageSquare } from 'lucide-react';
 import AIChat from '../components/AIChat';
 
 interface Message {
@@ -17,8 +17,6 @@ const Neural = () => {
   const [showBehavioralChat, setShowBehavioralChat] = useState(false);
   const [showEmotionalChat, setShowEmotionalChat] = useState(false);
   const [showCognitiveChat, setShowCognitiveChat] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [permissions, setPermissions] = useState<Permissions>({
     microphone: false,
@@ -100,32 +98,68 @@ const Neural = () => {
     }
   };
 
-  const categories = [
-    'Psicologia',
-    'Psicanálise',
-    'Filosofia',
-    'Comportamento',
-    'Emoções',
-    'Cognição'
-  ];
-
   const analysisCards = [
     {
       title: 'Análise Comportamental',
       description: 'Compreenda padrões de comportamento e suas origens psicológicas',
       icon: Brain,
+      color: 'purple',
       onClick: () => setShowBehavioralChat(true)
     },
     {
       title: 'Insights Emocionais',
       description: 'Explore a profundidade das emoções e seus significados',
-      icon: Activity,
+      icon: Heart,
+      color: 'red',
       onClick: () => setShowEmotionalChat(true)
     },
     {
       title: 'Padrões Cognitivos',
       description: 'Identifique e analise padrões de pensamento',
       icon: Cpu,
+      color: 'blue',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Análise Criativa',
+      description: 'Explore potenciais criativos e processos imaginativos',
+      icon: Lightbulb,
+      color: 'yellow',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Energia Mental',
+      description: 'Avalie níveis de energia e estados mentais',
+      icon: Zap,
+      color: 'orange',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Resolução de Problemas',
+      description: 'Analise abordagens para solução de desafios',
+      icon: Puzzle,
+      color: 'green',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Percepção Visual',
+      description: 'Explore padrões de percepção e processamento visual',
+      icon: Eye,
+      color: 'teal',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Conexões Neurais',
+      description: 'Mapeie conexões e redes de pensamento',
+      icon: Network,
+      color: 'cyan',
+      onClick: () => setShowCognitiveChat(true)
+    },
+    {
+      title: 'Comunicação Neural',
+      description: 'Analise padrões de comunicação e expressão',
+      icon: MessageSquare,
+      color: 'indigo',
       onClick: () => setShowCognitiveChat(true)
     }
   ];
@@ -188,56 +222,12 @@ const Neural = () => {
           <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent box-glow" />
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="mb-12 hud-border rounded-lg p-6 scanner">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Buscar análises..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-surface/50 border border-primary/30 rounded-lg focus:outline-none focus:border-primary text-primary placeholder-primary/50"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="text-primary h-5 w-5" />
-              <span className="text-primary font-medium">Filtrar por:</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => {
-                  playClickSound();
-                  setSelectedCategory(prev =>
-                    prev.includes(category)
-                      ? prev.filter(c => c !== category)
-                      : [...prev, category]
-                  );
-                }}
-                onMouseEnter={playHoverSound}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                  selectedCategory.includes(category)
-                    ? 'bg-primary text-surface-dark box-glow'
-                    : 'bg-surface/50 text-primary border border-primary/30 hover:border-primary'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Analysis Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {analysisCards.map((card, index) => (
             <div
               key={index}
-              className="hud-border rounded-lg overflow-hidden scanner group cursor-pointer"
+              className="hud-border rounded-lg overflow-hidden scanner group cursor-pointer transform hover:scale-105 transition-all duration-300"
               onClick={() => {
                 playClickSound();
                 card.onClick();
@@ -249,10 +239,15 @@ const Neural = () => {
                   <h3 className="text-xl font-bold text-primary text-glow">
                     {card.title}
                   </h3>
-                  <card.icon className="h-6 w-6 text-primary" />
+                  <card.icon className={`h-6 w-6 text-${card.color}-400`} />
                 </div>
-                <p className="text-primary/80 mb-4">{card.description}</p>
-                <div className="h-1 w-full bg-primary/20 rounded">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-surface/30 rounded-full border border-primary/30 group-hover:border-primary transition-all duration-300">
+                    <card.icon className={`h-8 w-8 text-${card.color}-400 group-hover:scale-110 transition-transform`} />
+                  </div>
+                </div>
+                <p className="text-primary/80">{card.description}</p>
+                <div className="mt-4 h-1 w-full bg-primary/20 rounded">
                   <div className="h-full w-2/3 bg-primary rounded animate-pulse" />
                 </div>
               </div>
