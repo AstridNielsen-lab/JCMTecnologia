@@ -101,7 +101,7 @@ const Products = () => {
     const fetchRepositories = async () => {
       try {
         const octokit = new Octokit();
-        const response = await octokit.request('GET /users/AstridNielsen-lab/repos', {
+        const response = await octokit.request('GET /users/juliocamposmachado/repos', {
           username: 'AstridNielsen-lab',
           sort: 'updated',
           per_page: 100,
